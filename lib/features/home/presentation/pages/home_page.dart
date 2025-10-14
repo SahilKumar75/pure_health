@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pure_health/widgets/custom_title_bar.dart';
 import 'package:pure_health/widgets/custom_map_widget.dart';
+import 'package:go_router/go_router.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -8,18 +9,22 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomTitleBar(title: 'Home'),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('Welcome to the Home Page!'),
-          const SizedBox(height: 16),
-          const Expanded(
-            child: CustomMapWidget(
-              zoom: 13.0,
+      appBar: CustomTitleBar(
+        title: 'Home',
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: IconButton(
+              icon: const Icon(Icons.account_circle, size: 28),
+              onPressed: () {
+                context.go('/profile');
+              },
             ),
           ),
         ],
+      ),
+      body: const CustomMapWidget(
+        zoom: 13.0,
       ),
     );
   }

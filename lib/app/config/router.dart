@@ -1,13 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pure_health/features/home/presentation/pages/home_page.dart';
+import 'package:pure_health/features/profile/presentation/pages/profile_page.dart';
+import 'package:flutter/cupertino.dart';
+
+CustomTransitionPage<T> cupertinoPage<T>({required Widget child}) => CustomTransitionPage<T>(
+  child: child,
+  transitionsBuilder: (context, animation, secondaryAnimation, child) => CupertinoPageTransition(
+    primaryRouteAnimation: animation,
+    secondaryRouteAnimation: secondaryAnimation,
+    linearTransition: true,
+    child: child,
+  ),
+);
 
 final GoRouter appRouter = GoRouter(
   routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const HomePage(),
+    ShellRoute(
+      builder: (context, state, child) => child,
+      routes: [
+        GoRoute(
+          path: '/',
+          pageBuilder: (context, state) => cupertinoPage(child: const HomePage()),
+        ),
+        GoRoute(
+          path: '/profile',
+          pageBuilder: (context, state) => cupertinoPage(child: const ProfilePage()),
+        ),
+      ],
     ),
-    // Add more routes here as needed
   ],
 );
