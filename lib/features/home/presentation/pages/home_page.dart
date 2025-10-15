@@ -1,30 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:pure_health/widgets/custom_title_bar.dart';
+import 'package:pure_health/widgets/custom_sidebar.dart';
 import 'package:pure_health/widgets/custom_map_widget.dart';
 import 'package:go_router/go_router.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int _selectedIndex = 0;
+
+  void _onItemSelected(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    if (index == 0) {
+      context.go('/');
+    } else if (index == 1) {
+      context.go('/profile');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomTitleBar(
-        title: 'Home',
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: IconButton(
-              icon: const Icon(Icons.account_circle, size: 28),
-              onPressed: () {
-                context.go('/profile');
-              },
+      body: Row(
+        children: [
+          CustomSidebar(
+            selectedIndex: _selectedIndex,
+            onItemSelected: _onItemSelected,
+          ),
+          const Expanded(
+            child: CustomMapWidget(
+              zoom: 13.0,
             ),
           ),
         ],
-      ),
-      body: const CustomMapWidget(
-        zoom: 13.0,
       ),
     );
   }
