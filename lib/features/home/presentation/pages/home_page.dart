@@ -22,6 +22,8 @@ class _HomePageState extends State<HomePage> {
       context.go('/');
     } else if (index == 1) {
       context.go('/profile');
+    } else if (index == 2) {
+      context.go('/history');
     }
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pure_health/features/home/presentation/pages/home_page.dart';
 import 'package:pure_health/features/profile/presentation/pages/profile_page.dart';
+import 'package:pure_health/features/history/history_report_page.dart';
 import 'package:flutter/cupertino.dart';
 
 CustomTransitionPage<T> cupertinoPage<T>({required Widget child}) => CustomTransitionPage<T>(
@@ -26,6 +27,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/profile',
           pageBuilder: (context, state) => cupertinoPage(child: const ProfilePage()),
+        ),
+        GoRoute(
+          path: '/history',
+          pageBuilder: (context, state) => cupertinoPage(child: const HistoryReportPage()),
         ),
       ],
     ),

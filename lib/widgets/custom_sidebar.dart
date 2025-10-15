@@ -127,6 +127,13 @@ class _CustomSidebarState extends State<CustomSidebar> {
               index: 0,
               onTap: () => widget.onItemSelected(0),
             ),
+            // History button
+            _buildNavItem(
+              icon: CupertinoIcons.time,
+              label: 'History',
+              index: 2,
+              onTap: () => widget.onItemSelected(2),
+            ),
             const Spacer(),
             // Bottom buttons
             Padding(
