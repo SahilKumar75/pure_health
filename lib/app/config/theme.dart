@@ -5,9 +5,9 @@ final glassTheme = ThemeData(
   brightness: Brightness.light,
   fontFamily: 'SF Pro', // iOS font
   primaryColor: CupertinoColors.activeBlue,
-  scaffoldBackgroundColor: CupertinoColors.extraLightBackgroundGray.withOpacity(0.7),
+  scaffoldBackgroundColor: Colors.white.withOpacity(0.12),
   appBarTheme: AppBarTheme(
-    backgroundColor: CupertinoColors.systemGrey6.withOpacity(0.6),
+    backgroundColor: Colors.white.withOpacity(0.18),
     elevation: 0,
     iconTheme: const IconThemeData(color: CupertinoColors.activeBlue),
     titleTextStyle: const TextStyle(
@@ -16,8 +16,14 @@ final glassTheme = ThemeData(
       fontSize: 20,
       fontFamily: 'SF Pro',
     ),
+    shape: Border(
+      bottom: BorderSide(
+        color: Colors.white.withOpacity(0.22),
+        width: 1.2,
+      ),
+    ),
   ),
-  cardColor: CupertinoColors.systemGrey6.withOpacity(0.5),
+  cardColor: Colors.white.withOpacity(0.16),
   textTheme: const TextTheme(
     bodyMedium: TextStyle(
       color: CupertinoColors.black,
@@ -30,8 +36,8 @@ final glassTheme = ThemeData(
 final glassCupertinoTheme = CupertinoThemeData(
   brightness: Brightness.light,
   primaryColor: CupertinoColors.activeBlue,
-  barBackgroundColor: CupertinoColors.systemGrey6.withOpacity(0.6),
-  scaffoldBackgroundColor: CupertinoColors.extraLightBackgroundGray.withOpacity(0.7),
+  barBackgroundColor: Colors.white.withOpacity(0.18),
+  scaffoldBackgroundColor: Colors.white.withOpacity(0.12),
   textTheme: const CupertinoTextThemeData(
     textStyle: TextStyle(
       color: CupertinoColors.black,

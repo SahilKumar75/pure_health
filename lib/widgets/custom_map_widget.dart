@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'glass_container.dart';
 import 'package:geolocator/geolocator.dart';
 
 class CustomMapWidget extends StatefulWidget {
@@ -20,10 +22,14 @@ class CustomMapWidget extends StatefulWidget {
 class _CustomMapWidgetState extends State<CustomMapWidget> {
   LatLng? _currentCenter;
   bool _loading = true;
+  late final MapController _mapController;
+  double _currentZoom = 13.0;
 
   @override
   void initState() {
     super.initState();
+    _mapController = MapController();
+    _currentZoom = widget.zoom;
     _determinePosition();
   }
 
@@ -51,19 +57,108 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
     if (_loading || _currentCenter == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    return FlutterMap(
-      mapController: MapController(),
-      options: MapOptions(
-        initialCenter: _currentCenter!,
-        initialZoom: widget.zoom,
-      ),
-      children: [
-        TileLayer(
-          urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          subdomains: const ['a', 'b', 'c'],
+    // Build the current location marker
+    final currentLocationMarker = Marker(
+      point: _currentCenter!,
+      width: 48,
+      height: 48,
+      child: GlassContainer(
+        borderRadius: BorderRadius.circular(24),
+        blur: 8,
+        opacity: 0.25,
+        padding: const EdgeInsets.all(4),
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blueAccent.withOpacity(0.15),
+                blurRadius: 8,
+                spreadRadius: 2,
+              ),
+            ],
+            border: Border.all(
+              color: Colors.blueAccent,
+              width: 2,
+            ),
+          ),
+          child: const Icon(
+            // Cupertino style location icon
+            // You may need to import CupertinoIcons if not already
+            CupertinoIcons.location_solid,
+            color: Colors.blueAccent,
+            size: 28,
+          ),
         ),
-        if (widget.markers != null)
-          MarkerLayer(markers: widget.markers!),
+      ),
+    );
+
+    // Combine user markers and current location marker
+    final allMarkers = <Marker>[];
+    if (widget.markers != null) {
+      allMarkers.addAll(widget.markers!);
+    }
+    allMarkers.add(currentLocationMarker);
+
+    return Stack(
+      children: [
+        GlassContainer(
+          borderRadius: BorderRadius.circular(24),
+          blur: 12,
+          opacity: 0.12,
+          padding: EdgeInsets.zero,
+          child: FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _currentCenter!,
+              initialZoom: _currentZoom,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                subdomains: const ['a', 'b', 'c'],
+              ),
+              MarkerLayer(markers: allMarkers),
+            ],
+          ),
+        ),
+        Positioned(
+          bottom: 24,
+          right: 16,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                minSize: 36,
+                borderRadius: BorderRadius.circular(18),
+                color: Colors.white.withOpacity(0.85),
+                child: const Icon(CupertinoIcons.plus, color: Colors.blueAccent, size: 24),
+                onPressed: () {
+                  setState(() {
+                    _currentZoom = (_currentZoom + 1).clamp(1.0, 18.0);
+                    _mapController.move(_currentCenter!, _currentZoom);
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                minSize: 36,
+                borderRadius: BorderRadius.circular(18),
+                color: Colors.white.withOpacity(0.85),
+                child: const Icon(CupertinoIcons.minus, color: Colors.blueAccent, size: 24),
+                onPressed: () {
+                  setState(() {
+                    _currentZoom = (_currentZoom - 1).clamp(1.0, 18.0);
+                    _mapController.move(_currentCenter!, _currentZoom);
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

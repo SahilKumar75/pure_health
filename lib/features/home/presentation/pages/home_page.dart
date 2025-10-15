@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pure_health/widgets/custom_sidebar.dart';
 import 'package:pure_health/widgets/custom_map_widget.dart';
+import 'package:pure_health/widgets/glass_container.dart';
 import 'package:go_router/go_router.dart';
 
 class HomePage extends StatefulWidget {
@@ -27,18 +28,24 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Row(
-        children: [
-          CustomSidebar(
-            selectedIndex: _selectedIndex,
-            onItemSelected: _onItemSelected,
-          ),
-          const Expanded(
-            child: CustomMapWidget(
-              zoom: 13.0,
+      body: GlassContainer(
+        borderRadius: BorderRadius.zero,
+        blur: 18,
+        opacity: 0.14,
+        padding: EdgeInsets.zero,
+        child: Row(
+          children: [
+            CustomSidebar(
+              selectedIndex: _selectedIndex,
+              onItemSelected: _onItemSelected,
             ),
-          ),
-        ],
+            const Expanded(
+              child: CustomMapWidget(
+                zoom: 13.0,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

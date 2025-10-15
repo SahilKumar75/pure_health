@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'glass_container.dart';
 
 class CupertinoButtonWidget extends StatelessWidget {
   final String text;
@@ -15,10 +16,16 @@ class CupertinoButtonWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoButton(
-      color: color ?? CupertinoColors.activeBlue,
-      child: Text(text),
-      onPressed: onPressed,
+    return GlassContainer(
+      borderRadius: BorderRadius.circular(32),
+      blur: 8,
+      opacity: 0.18,
+      padding: EdgeInsets.zero,
+      child: CupertinoButton(
+        color: color?.withOpacity(0.7) ?? CupertinoColors.activeBlue.withOpacity(0.7),
+        child: Text(text),
+        onPressed: onPressed,
+      ),
     );
   }
 }
