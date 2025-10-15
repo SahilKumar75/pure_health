@@ -13,19 +13,6 @@ class HistoryReportPage extends StatefulWidget {
 class _HistoryReportPageState extends State<HistoryReportPage> {
   int _selectedIndex = 2;
 
-  void _onItemSelected(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    if (index == 0) {
-      context.go('/');
-    } else if (index == 1) {
-      context.go('/profile');
-    } else if (index == 2) {
-      context.go('/history');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,7 +25,11 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
           children: [
             CustomSidebar(
               selectedIndex: _selectedIndex,
-              onItemSelected: _onItemSelected,
+              onItemSelected: (int index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
             ),
             Expanded(
               child: Padding(

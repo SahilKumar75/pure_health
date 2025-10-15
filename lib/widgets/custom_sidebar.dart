@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'glass_container.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 
 class CustomSidebar extends StatefulWidget {
   final int selectedIndex;
@@ -19,19 +20,32 @@ class CustomSidebar extends StatefulWidget {
 class _CustomSidebarState extends State<CustomSidebar> {
   bool isExpanded = false;
 
+  void _handleNavigation(int index) {
+    if (index == 0) {
+      GoRouter.of(context).go('/');
+    } else if (index == 1) {
+      GoRouter.of(context).go('/profile');
+    } else if (index == 2) {
+      GoRouter.of(context).go('/history');
+    } else if (index == 3) {
+      GoRouter.of(context).go('/settings');
+    }
+    if (widget.onItemSelected != null) {
+      widget.onItemSelected(index);
+    }
+  }
+
   Widget _buildNavItem({
     required IconData icon,
     required String label,
     required int index,
-    required VoidCallback onTap,
   }) {
     final isSelected = widget.selectedIndex == index;
-    
     return Material(
       color: Colors.transparent,
       child: InkWell(
         customBorder: isExpanded ? null : const CircleBorder(),
-        onTap: onTap,
+        onTap: () => _handleNavigation(index),
         child: GlassContainer(
           borderRadius: BorderRadius.circular(isExpanded ? 16 : 32),
           blur: 10,
@@ -125,14 +139,12 @@ class _CustomSidebarState extends State<CustomSidebar> {
               icon: CupertinoIcons.home,
               label: 'Home',
               index: 0,
-              onTap: () => widget.onItemSelected(0),
             ),
             // History button
             _buildNavItem(
               icon: CupertinoIcons.time,
               label: 'History',
               index: 2,
-              onTap: () => widget.onItemSelected(2),
             ),
             const Spacer(),
             // Bottom buttons
@@ -146,51 +158,13 @@ class _CustomSidebarState extends State<CustomSidebar> {
                     icon: CupertinoIcons.profile_circled,
                     label: 'Profile',
                     index: 1,
-                    onTap: () => widget.onItemSelected(1),
                   ),
                   const SizedBox(height: 8),
                   // Settings button
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      customBorder: isExpanded ? null : const CircleBorder(),
-                      onTap: () {
-                        showModalBottomSheet<void>(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return SizedBox(
-                              height: 200,
-                              child: Center(
-                                child: Text(
-                                  'Settings placeholder',
-                                  style: Theme.of(context).textTheme.titleLarge,
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                      child: GlassContainer(
-                        borderRadius: BorderRadius.circular(isExpanded ? 16 : 32),
-                        blur: 10,
-                        opacity: 0.22,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isExpanded ? 16.0 : 12.0,
-                          vertical: 8.0,
-                        ),
-                        child: isExpanded
-                            ? Row(
-                                children: const [
-                                  Icon(CupertinoIcons.settings),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text('Settings'),
-                                  ),
-                                ],
-                              )
-                            : const Icon(CupertinoIcons.settings),
-                      ),
-                    ),
+                  _buildNavItem(
+                    icon: CupertinoIcons.settings,
+                    label: 'Settings',
+                    index: 3,
                   ),
                 ],
               ),

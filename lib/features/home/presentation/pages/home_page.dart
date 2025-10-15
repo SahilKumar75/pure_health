@@ -14,19 +14,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  void _onItemSelected(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    if (index == 0) {
-      context.go('/');
-    } else if (index == 1) {
-      context.go('/profile');
-    } else if (index == 2) {
-      context.go('/history');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,7 +26,11 @@ class _HomePageState extends State<HomePage> {
           children: [
             CustomSidebar(
               selectedIndex: _selectedIndex,
-              onItemSelected: _onItemSelected,
+              onItemSelected: (int index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
             ),
             const Expanded(
               child: CustomMapWidget(
