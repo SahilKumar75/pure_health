@@ -4,12 +4,12 @@ import 'package:flutter/cupertino.dart';
 final glassTheme = ThemeData(
   brightness: Brightness.light,
   fontFamily: 'SF Pro', // iOS font
-  primaryColor: CupertinoColors.activeBlue,
+  primaryColor: CupertinoColors.black,
   scaffoldBackgroundColor: Colors.white.withOpacity(0.12),
   appBarTheme: AppBarTheme(
     backgroundColor: Colors.white.withOpacity(0.18),
     elevation: 0,
-    iconTheme: const IconThemeData(color: CupertinoColors.activeBlue),
+    iconTheme: const IconThemeData(color: CupertinoColors.black),
     titleTextStyle: const TextStyle(
       color: CupertinoColors.black,
       fontWeight: FontWeight.w600,
@@ -35,7 +35,7 @@ final glassTheme = ThemeData(
 
 final glassCupertinoTheme = CupertinoThemeData(
   brightness: Brightness.light,
-  primaryColor: CupertinoColors.activeBlue,
+  primaryColor: CupertinoColors.black,
   barBackgroundColor: Colors.white.withOpacity(0.18),
   scaffoldBackgroundColor: Colors.white.withOpacity(0.12),
   textTheme: const CupertinoTextThemeData(

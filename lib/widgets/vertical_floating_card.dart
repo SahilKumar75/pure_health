@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'glass_container.dart';
+
 
 /// A reusable vertical floating card with iOS-style glass effect.
 /// - anchored to left or right
@@ -253,18 +253,26 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                       top: 0,
                       bottom: 0,
                       width: widget.width,
-                      child: GlassContainer(
-                        borderRadius: anchoredRight
-                            ? const BorderRadius.only(
-                                topLeft: Radius.circular(24),
-                                bottomLeft: Radius.circular(24),
-                              )
-                            : const BorderRadius.only(
-                                topRight: Radius.circular(24),
-                                bottomRight: Radius.circular(24),
-                              ),
-                        blur: 20,
-                        opacity: 0.12,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: anchoredRight
+                              ? const BorderRadius.only(
+                                  topLeft: Radius.circular(24),
+                                  bottomLeft: Radius.circular(24),
+                                )
+                              : const BorderRadius.only(
+                                  topRight: Radius.circular(24),
+                                  bottomRight: Radius.circular(24),
+                                ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 20,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
                         padding: const EdgeInsets.all(16),
                         child: widget.child ?? _buildDefaultContent(),
                       ),

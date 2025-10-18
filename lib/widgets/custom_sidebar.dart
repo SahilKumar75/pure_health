@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'glass_container.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 
@@ -62,6 +61,11 @@ class _CustomSidebarState extends State<CustomSidebar> {
     required int index,
   }) {
     final isSelected = widget.selectedIndex == index;
+    final theme = Theme.of(context);
+    final cupertinoTheme = CupertinoTheme.of(context);
+    final primaryColor = theme.primaryColor;
+  final labelColor = Colors.white;
+  final inactiveColor = CupertinoColors.white.withOpacity(0.5);
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: isExpanded ? 8.0 : 4.0,
@@ -76,56 +80,50 @@ class _CustomSidebarState extends State<CustomSidebar> {
           onTap: () => _handleNavigation(index),
           child: Container(
             padding: EdgeInsets.all(isExpanded ? 12.0 : 10.0),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? CupertinoColors.activeBlue.withOpacity(0.15)
-                  : Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(isExpanded ? 16 : 32),
-              border: Border.all(
-                color: isSelected
-                    ? CupertinoColors.activeBlue.withOpacity(0.3)
-                    : Colors.white.withOpacity(0.1),
-                width: 1.5,
-              ),
-            ),
-            child: isExpanded
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        icon,
-                        color: isSelected
-                            ? CupertinoColors.activeBlue
-                            : CupertinoColors.systemGrey,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 12),
-                      Flexible(
-                        fit: FlexFit.loose,
-                        child: Text(
-                          label,
-                          style: TextStyle(
-                            color: isSelected
-                                ? CupertinoColors.activeBlue
-                                : CupertinoColors.label,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  )
-                : Center(
-                    child: Icon(
-                      icon,
-                      color: isSelected
-                          ? CupertinoColors.activeBlue
-                          : CupertinoColors.systemGrey,
-                      size: 22,
+            decoration: isSelected
+                ? BoxDecoration(
+                    color: Colors.white.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(isExpanded ? 16 : 32),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.25),
+                      width: 1.5,
                     ),
-                  ),
+                  )
+                : null,
+                    child: isExpanded
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                icon,
+                color: CupertinoColors.white,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                fit: FlexFit.loose,
+                                child: Text(
+                                  label,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : labelColor,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Center(
+                            child: Icon(
+                              icon,
+                color: CupertinoColors.white,
+                              size: 22,
+                            ),
+                          ),
           ),
         ),
       ),
@@ -135,10 +133,21 @@ class _CustomSidebarState extends State<CustomSidebar> {
 
   @override
   Widget build(BuildContext context) {
-    return GlassContainer(
-      borderRadius: BorderRadius.circular(24),
-      blur: 16,
-      opacity: 0.18,
+  final theme = Theme.of(context);
+  final cupertinoTheme = CupertinoTheme.of(context);
+  final labelColor = cupertinoTheme.textTheme.textStyle.color ?? theme.textTheme.bodyMedium?.color ?? Colors.black;
+  final inactiveColor = cupertinoTheme.primaryColor.withOpacity(0.4);
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF343434),
+        borderRadius: BorderRadius.zero,
+        border: const Border(
+          right: BorderSide(
+            color: Color(0xFFDDDDDD),
+            width: 0.7,
+          ),
+        ),
+      ),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
@@ -168,19 +177,19 @@ class _CustomSidebarState extends State<CustomSidebar> {
                     child: isExpanded
                         ? Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Icon(
                                 CupertinoIcons.sidebar_left,
-                                color: CupertinoColors.systemGrey,
+                                color: CupertinoColors.white,
                               ),
-                              SizedBox(width: 12),
+                              const SizedBox(width: 12),
                               Flexible(
                                 fit: FlexFit.loose,
                                 child: Text(
                                   'Menu',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
-                                    color: CupertinoColors.label,
+                                    color: labelColor,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -190,7 +199,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
                         : Center(
                             child: Icon(
                               CupertinoIcons.bars,
-                              color: CupertinoColors.systemGrey,
+                              color: CupertinoColors.white,
                             ),
                           ),
                   ),

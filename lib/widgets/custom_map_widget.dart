@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'glass_container.dart';
+
 import 'package:geolocator/geolocator.dart';
 
 class CustomMapWidget extends StatefulWidget {
@@ -64,34 +64,26 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
       point: _currentCenter!,
       width: 48,
       height: 48,
-      child: GlassContainer(
-        borderRadius: BorderRadius.circular(24),
-        blur: 8,
-        opacity: 0.25,
-        padding: const EdgeInsets.all(4),
-        child: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.blueAccent.withOpacity(0.15),
-                blurRadius: 8,
-                spreadRadius: 2,
-              ),
-            ],
-            border: Border.all(
-              color: Colors.blueAccent,
-              width: 2,
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blueAccent.withOpacity(0.15),
+              blurRadius: 8,
+              spreadRadius: 2,
             ),
-          ),
-          child: const Icon(
-            // Cupertino style location icon
-            // You may need to import CupertinoIcons if not already
-            CupertinoIcons.location_solid,
+          ],
+          border: Border.all(
             color: Colors.blueAccent,
-            size: 28,
+            width: 2,
           ),
+        ),
+        child: const Icon(
+          CupertinoIcons.location_solid,
+          color: Colors.blueAccent,
+          size: 28,
         ),
       ),
     );
@@ -105,11 +97,18 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
 
     return Stack(
       children: [
-        GlassContainer(
-          borderRadius: BorderRadius.circular(24),
-          blur: 12,
-          opacity: 0.12,
-          padding: EdgeInsets.zero,
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 12,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
           child: FlutterMap(
             mapController: _mapController,
             options: MapOptions(

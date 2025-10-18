@@ -1,8 +1,7 @@
+
 import 'package:flutter/material.dart';
 import 'package:pure_health/widgets/custom_sidebar.dart';
-import 'package:pure_health/widgets/glass_container.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:go_router/go_router.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -22,10 +21,18 @@ class _SettingsPageState extends State<SettingsPage> {
     required String value,
     Color? iconColor,
   }) {
-    return GlassContainer(
-      borderRadius: BorderRadius.circular(16),
-      blur: 10,
-      opacity: 0.15,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           Container(
@@ -77,11 +84,18 @@ class _SettingsPageState extends State<SettingsPage> {
     Color? color,
   }) {
     final buttonColor = color ?? CupertinoColors.activeBlue;
-    return GlassContainer(
-      borderRadius: BorderRadius.circular(16),
-      blur: 10,
-      opacity: 0.15,
-      padding: EdgeInsets.zero,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -128,11 +142,19 @@ class _SettingsPageState extends State<SettingsPage> {
     required ValueChanged<bool> onChanged,
     Color? iconColor,
   }) {
-    return GlassContainer(
-      borderRadius: BorderRadius.circular(12),
-      blur: 8,
-      opacity: 0.15,
+    return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           Container(
@@ -208,10 +230,18 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 32),
                     // Preferences
-                    GlassContainer(
-                      borderRadius: BorderRadius.circular(20),
-                      blur: 12,
-                      opacity: 0.15,
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -252,10 +282,18 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 20),
                     // More Options
-                    GlassContainer(
-                      borderRadius: BorderRadius.circular(20),
-                      blur: 12,
-                      opacity: 0.15,
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -298,11 +336,18 @@ class _SettingsPageState extends State<SettingsPage> {
                     // Sign Out Button
                     SizedBox(
                       width: double.infinity,
-                      child: GlassContainer(
-                        borderRadius: BorderRadius.circular(12),
-                        blur: 10,
-                        opacity: 0.15,
-                        padding: EdgeInsets.zero,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
