@@ -8,11 +8,13 @@ import 'package:geolocator/geolocator.dart';
 class CustomMapWidget extends StatefulWidget {
   final double zoom;
   final List<Marker>? markers;
+  final double sidebarWidth;
 
   const CustomMapWidget({
     Key? key,
     this.zoom = 13.0,
     this.markers,
+    this.sidebarWidth = 72.0,
   }) : super(key: key);
 
   @override
@@ -123,11 +125,13 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
             ],
           ),
         ),
+        // Move zoom controls to bottom left, dynamically beside sidebar
         Positioned(
-          bottom: 24,
-          right: 16,
+          bottom: 32,
+          left: widget.sidebarWidth + 8, // 8px gap from sidebar
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CupertinoButton(
                 padding: EdgeInsets.zero,

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:pure_health/widgets/custom_sidebar.dart';
 import 'package:pure_health/widgets/custom_map_widget.dart';
-import 'package:pure_health/widgets/glass_container.dart';
+import 'package:pure_health/widgets/vertical_floating_card.dart';
 import 'package:go_router/go_router.dart';
 
 class HomePage extends StatefulWidget {
@@ -16,15 +17,21 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: GlassContainer(
-        borderRadius: BorderRadius.zero,
-        blur: 18,
-        opacity: 0.14,
-        padding: EdgeInsets.zero,
-        child: Row(
-          children: [
-            CustomSidebar(
+    return CupertinoPageScaffold(
+      backgroundColor: CupertinoColors.systemBackground,
+      child: Stack(
+        children: [
+          // Map widget as the base layer - provides content for glass blur effect
+          const CustomMapWidget(
+            zoom: 13.0,
+            sidebarWidth: 72.0, // Pass collapsed width; for dynamic, lift state up
+          ),
+          // Sidebar with glass effect positioned on the left
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: CustomSidebar(
               selectedIndex: _selectedIndex,
               onItemSelected: (int index) {
                 setState(() {
@@ -32,13 +39,14 @@ class _HomePageState extends State<HomePage> {
                 });
               },
             ),
-            const Expanded(
-              child: CustomMapWidget(
-                zoom: 13.0,
-              ),
-            ),
-          ],
-        ),
+          ),
+          // iOS-style vertical floating card on the right
+          const VerticalFloatingCard(
+            width: 320,
+            initiallyCollapsed: false,
+            alignment: Alignment.centerRight,
+          ),
+        ],
       ),
     );
   }
