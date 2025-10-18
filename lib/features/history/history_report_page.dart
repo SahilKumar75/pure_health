@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:pure_health/widgets/custom_map_widget.dart';
 import 'package:pure_health/widgets/custom_sidebar.dart';
-import 'package:pure_health/widgets/glass_container.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart'; // Add this package for date formatting
+import 'package:intl/intl.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:pure_health/widgets/glass_container.dart';
+
 
 // A simple data model for the reports
 class Report {
@@ -11,6 +13,7 @@ class Report {
   final String title;
   final DateTime date;
   final String details;
+
 
   Report({
     required this.id,
@@ -20,17 +23,20 @@ class Report {
   });
 }
 
+
 class HistoryReportPage extends StatefulWidget {
   const HistoryReportPage({super.key});
+
 
   @override
   State<HistoryReportPage> createState() => _HistoryReportPageState();
 }
 
-class _HistoryReportPageState extends State<HistoryReportPage> {
-  int _selectedIndex = 2; // Assuming 'History' is at index 2 in your sidebar
 
-  // --- State Management for Reports and Filtering ---
+class _HistoryReportPageState extends State<HistoryReportPage> {
+  int _selectedIndex = 2;
+  bool _isSidebarExpanded = false;
+
 
   // Dummy data representing all reports from the ML simulation
   final List<Report> _allReports = List.generate(
@@ -38,26 +44,27 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
     (index) => Report(
       id: 'report_${index + 1}',
       title: 'ML Simulation Report #${index + 1}',
-      date: DateTime(2025, 10, 15).subtract(Duration(days: index * 3)), // Reports every 3 days
+      date: DateTime(2025, 10, 15).subtract(Duration(days: index * 3)),
       details: 'This contains the full analysis and data from the simulation on a given date.',
     ),
   );
 
+
   late List<Report> _filteredReports;
   DateTimeRange? _selectedDateRange;
+
 
   @override
   void initState() {
     super.initState();
-    // Initially, show all reports
     _filteredReports = _allReports;
   }
 
-  // --- Date Picker Logic ---
 
   Future<void> _selectDateRangeCupertino() async {
     DateTime startDate = _selectedDateRange?.start ?? DateTime.now().subtract(const Duration(days: 30));
     DateTime endDate = _selectedDateRange?.end ?? DateTime.now();
+
 
     // Select start date
     await showCupertinoModalPopup(
@@ -94,6 +101,7 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
       },
     );
 
+
     // Select end date
     await showCupertinoModalPopup(
       context: context,
@@ -129,125 +137,274 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
       },
     );
 
-    if (startDate != null && endDate != null) {
-      setState(() {
-        _selectedDateRange = DateTimeRange(start: startDate, end: endDate);
-        final endDateInclusive = endDate.add(const Duration(days: 1));
-        _filteredReports = _allReports.where((report) {
-          return report.date.isAfter(startDate) && report.date.isBefore(endDateInclusive);
-        }).toList();
-      });
-    }
+
+    setState(() {
+      _selectedDateRange = DateTimeRange(start: startDate, end: endDate);
+      final endDateInclusive = endDate.add(const Duration(days: 1));
+      _filteredReports = _allReports.where((report) {
+        return report.date.isAfter(startDate) && report.date.isBefore(endDateInclusive);
+      }).toList();
+    });
   }
+
+
+  void _clearFilter() {
+    setState(() {
+      _selectedDateRange = null;
+      _filteredReports = _allReports;
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final bottomCardHeight = screenHeight * 0.35; // 35% of screen height
+    // Dynamic sidebar width based on expansion state
+    final sidebarWidth = _isSidebarExpanded ? 216.0 : 88.0;
+    
     return Scaffold(
-      body: GlassContainer(
-        borderRadius: BorderRadius.zero,
-        blur: 18,
-        opacity: 0.14,
-        padding: EdgeInsets.zero,
-        child: Row(
+      backgroundColor: const Color(0xFFF2F2F7),
+      body: NotificationListener<SidebarExpandNotification>(
+        onNotification: (notification) {
+          setState(() {
+            _isSidebarExpanded = notification.isExpanded;
+          });
+          return true;
+        },
+        child: Stack(
           children: [
-            CustomSidebar(
-              selectedIndex: _selectedIndex,
-              onItemSelected: (int index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
+            // Full screen map (behind everything, under sidebar too)
+            Positioned.fill(
+              child: CustomMapWidget(),
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: GlassContainer(
-                  borderRadius: BorderRadius.circular(32),
-                  blur: 12,
-                  opacity: 0.18,
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Report History',
-                        style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black87),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _selectedDateRange == null
-                                ? 'Showing all reports'
-                                : 'Reports from ${DateFormat.yMMMd().format(_selectedDateRange!.start)} to ${DateFormat.yMMMd().format(_selectedDateRange!.end)}',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.black87),
+            // Sidebar on top of map
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: CustomSidebar(
+                selectedIndex: _selectedIndex,
+                onItemSelected: (int index) {
+                  setState(() {
+                    _selectedIndex = index;
+                  });
+                  if (index == 0) {
+                    context.go('/');
+                  } else if (index == 1) {
+                    context.go('/profile');
+                  } else if (index == 2) {
+                    context.go('/history');
+                  }
+                },
+              ),
+            ),
+            // Bottom card - animates with sidebar expansion
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              left: sidebarWidth,
+              right: 0,
+              bottom: 0,
+              height: bottomCardHeight,
+              child: GlassContainer(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+                blur: 16,
+                opacity: 0.15,
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Report History',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.7),
-                              foregroundColor: Colors.black87,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                            ),
-                            onPressed: _selectDateRangeCupertino,
-                            icon: const Icon(Icons.calendar_today),
-                            label: const Text('Select Date Range'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: _filteredReports.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  'No reports found for the selected date range.',
-                                  style: TextStyle(fontSize: 18, color: Colors.black54),
+                        ),
+                        Row(
+                          children: [
+                            if (_selectedDateRange != null)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: CupertinoButton(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  color: CupertinoColors.systemGrey5,
+                                  borderRadius: BorderRadius.circular(10),
+                                  minSize: 0,
+                                  onPressed: _clearFilter,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(
+                                        CupertinoIcons.xmark_circle_fill,
+                                        size: 14,
+                                        color: CupertinoColors.systemGrey,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Clear',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: CupertinoColors.systemGrey,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              )
-                            : ListView.builder(
-                                itemCount: _filteredReports.length,
-                                itemBuilder: (context, index) {
-                                  final report = _filteredReports[index];
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    child: GlassContainer(
-                                      borderRadius: BorderRadius.circular(20),
-                                      blur: 8,
-                                      opacity: 0.22,
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      child: ListTile(
-                                        leading: Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.blue.withOpacity(0.12),
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          padding: const EdgeInsets.all(8),
-                                          child: const Icon(Icons.description_outlined, color: Colors.blue, size: 28),
-                                        ),
-                                        title: Text(
-                                          report.title,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
-                                        ),
-                                        subtitle: Text(
-                                          'Generated on: ${DateFormat.yMMMd().format(report.date)}',
-                                          style: const TextStyle(color: Colors.black54, fontSize: 14),
-                                        ),
-                                        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.black38),
+                              ),
+                            CupertinoButton(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              color: CupertinoColors.activeBlue,
+                              borderRadius: BorderRadius.circular(10),
+                              minSize: 0,
+                              onPressed: _selectDateRangeCupertino,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(
+                                    CupertinoIcons.calendar,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Select Date',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _selectedDateRange == null
+                          ? 'Showing all reports'
+                          : 'From ${DateFormat.yMMMd().format(_selectedDateRange!.start)} to ${DateFormat.yMMMd().format(_selectedDateRange!.end)}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: _filteredReports.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    CupertinoIcons.doc_text_search,
+                                    size: 48,
+                                    color: Colors.grey.withOpacity(0.5),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'No reports found',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: _filteredReports.length,
+                              itemBuilder: (context, index) {
+                                final report = _filteredReports[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: GlassContainer(
+                                    borderRadius: BorderRadius.circular(12),
+                                    blur: 8,
+                                    opacity: 0.15,
+                                    padding: EdgeInsets.zero,
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
                                         onTap: () {
                                           context.go('/reports/${report.id}');
                                         },
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(12),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                decoration: BoxDecoration(
+                                                  gradient: const LinearGradient(
+                                                    colors: [
+                                                      CupertinoColors.activeBlue,
+                                                      CupertinoColors.systemBlue,
+                                                    ],
+                                                  ),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                padding: const EdgeInsets.all(10),
+                                                child: const Icon(
+                                                  CupertinoIcons.doc_text_fill,
+                                                  color: Colors.white,
+                                                  size: 22,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      report.title,
+                                                      style: const TextStyle(
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 15,
+                                                        color: Colors.black87,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 3),
+                                                    Text(
+                                                      'Generated: ${DateFormat.yMMMd().format(report.date)}',
+                                                      style: const TextStyle(
+                                                        color: Colors.black54,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const Icon(
+                                                CupertinoIcons.chevron_right,
+                                                size: 18,
+                                                color: Colors.black38,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 ),
               ),
             ),

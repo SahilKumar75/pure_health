@@ -3,9 +3,19 @@ import 'glass_container.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 
+
+// Notification class to communicate sidebar expansion state
+class SidebarExpandNotification extends Notification {
+  final bool isExpanded;
+  
+  SidebarExpandNotification(this.isExpanded);
+}
+
+
 class CustomSidebar extends StatefulWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
+
 
   const CustomSidebar({
     Key? key,
@@ -13,12 +23,15 @@ class CustomSidebar extends StatefulWidget {
     required this.onItemSelected,
   }) : super(key: key);
 
+
   @override
   State<CustomSidebar> createState() => _CustomSidebarState();
 }
 
+
 class _CustomSidebarState extends State<CustomSidebar> {
   bool isExpanded = false;
+
 
   void _handleNavigation(int index) {
     if (index == 0) {
@@ -33,6 +46,16 @@ class _CustomSidebarState extends State<CustomSidebar> {
     widget.onItemSelected(index);
   }
 
+
+  void _toggleExpansion() {
+    setState(() {
+      isExpanded = !isExpanded;
+    });
+    // Send notification to parent widgets
+    SidebarExpandNotification(isExpanded).dispatch(context);
+  }
+
+
   Widget _buildNavItem({
     required IconData icon,
     required String label,
@@ -40,7 +63,10 @@ class _CustomSidebarState extends State<CustomSidebar> {
   }) {
     final isSelected = widget.selectedIndex == index;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      padding: EdgeInsets.symmetric(
+        horizontal: isExpanded ? 8.0 : 4.0,
+        vertical: 4.0,
+      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -49,10 +75,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
           ),
           onTap: () => _handleNavigation(index),
           child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: isExpanded ? 16.0 : 12.0,
-              vertical: 12.0,
-            ),
+            padding: EdgeInsets.all(isExpanded ? 12.0 : 10.0),
             decoration: BoxDecoration(
               color: isSelected
                   ? CupertinoColors.activeBlue.withOpacity(0.15)
@@ -67,6 +90,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
             ),
             child: isExpanded
                 ? Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         icon,
@@ -76,7 +100,8 @@ class _CustomSidebarState extends State<CustomSidebar> {
                         size: 22,
                       ),
                       const SizedBox(width: 12),
-                      Expanded(
+                      Flexible(
+                        fit: FlexFit.loose,
                         child: Text(
                           label,
                           style: TextStyle(
@@ -87,22 +112,26 @@ class _CustomSidebarState extends State<CustomSidebar> {
                                 ? FontWeight.w600
                                 : FontWeight.w400,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   )
-                : Icon(
-                    icon,
-                    color: isSelected
-                        ? CupertinoColors.activeBlue
-                        : CupertinoColors.systemGrey,
-                    size: 22,
+                : Center(
+                    child: Icon(
+                      icon,
+                      color: isSelected
+                          ? CupertinoColors.activeBlue
+                          : CupertinoColors.systemGrey,
+                      size: 22,
+                    ),
                   ),
           ),
         ),
       ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -119,46 +148,50 @@ class _CustomSidebarState extends State<CustomSidebar> {
           children: [
             // Menu button
             Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
+              padding: EdgeInsets.symmetric(
+                horizontal: isExpanded ? 8.0 : 4.0,
+                vertical: 4.0,
+              ),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
                   customBorder: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  onTap: () {
-                    setState(() {
-                      isExpanded = !isExpanded;
-                    });
-                  },
+                  onTap: _toggleExpansion,
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(isExpanded ? 12.0 : 10.0),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: isExpanded
                         ? Row(
-                            children: [
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
                               Icon(
                                 CupertinoIcons.sidebar_left,
                                 color: CupertinoColors.systemGrey,
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
+                              SizedBox(width: 12),
+                              Flexible(
+                                fit: FlexFit.loose,
                                 child: Text(
                                   'Menu',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     color: CupertinoColors.label,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           )
-                        : Icon(
-                            CupertinoIcons.bars,
-                            color: CupertinoColors.systemGrey,
+                        : Center(
+                            child: Icon(
+                              CupertinoIcons.bars,
+                              color: CupertinoColors.systemGrey,
+                            ),
                           ),
                   ),
                 ),
