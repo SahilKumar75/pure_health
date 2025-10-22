@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 /// A vertical floating card that acts as a chat interface, with collapse/expand and const constructor support.
 class VerticalFloatingCard extends StatefulWidget {
@@ -62,14 +62,31 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Chat',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: CupertinoColors.label,
-                letterSpacing: -0.5,
-              ),
+            Row(
+              children: [
+                const Text(
+                  'Chat',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: CupertinoColors.label,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minSize: 28,
+                  onPressed: () {
+                    GoRouter.of(context).go('/chat');
+                  },
+                  child: const Icon(
+                    CupertinoIcons.arrow_up_right_square,
+                    color: CupertinoColors.activeBlue,
+                    size: 22,
+                  ),
+                ),
+              ],
             ),
             CupertinoButton(
               padding: EdgeInsets.zero,
@@ -90,7 +107,11 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
             ),
           ],
         ),
-        const Divider(height: 16),
+        Container(
+          height: 1,
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          color: CupertinoColors.separator,
+        ),
         // Chat messages
         Expanded(
           child: ListView.builder(
@@ -113,7 +134,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                   child: Text(
                     msg.text,
                     style: TextStyle(
-                      color: msg.isUser ? Colors.white : CupertinoColors.label,
+                      color: msg.isUser ? CupertinoColors.white : CupertinoColors.label,
                       fontSize: 16,
                     ),
                   ),
@@ -186,7 +207,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                       width: widget.width,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: CupertinoColors.white,
                           borderRadius: anchoredRight
                               ? const BorderRadius.only(
                                   topLeft: Radius.circular(24),
@@ -198,7 +219,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                                 ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black12,
+                              color: CupertinoColors.systemGrey4,
                               blurRadius: 20,
                               offset: Offset(0, 2),
                             ),
@@ -220,7 +241,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                           onTap: _toggle,
                           child: Container(
                             decoration: const BoxDecoration(
-                              color: Colors.transparent,
+                              color: CupertinoColors.transparent,
                             ),
                             child: Center(
                               child: Container(
