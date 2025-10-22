@@ -1,16 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-
-/// A reusable vertical floating card with iOS-style glass effect.
-/// - anchored to left or right
-/// - extends from top to bottom with SafeArea
-/// - collapses to a small visible tab and expands when tapped
-/// - includes default Quick Tools content with iOS theming
+/// A vertical floating card that acts as a chat interface, with collapse/expand and const constructor support.
 class VerticalFloatingCard extends StatefulWidget {
   final double width;
   final double collapsedVisibleWidth;
-  final Widget? child;
   final bool initiallyCollapsed;
   final Alignment alignment;
   final Duration duration;
@@ -19,7 +13,6 @@ class VerticalFloatingCard extends StatefulWidget {
     Key? key,
     this.width = 320,
     this.collapsedVisibleWidth = 32,
-    this.child,
     this.initiallyCollapsed = false,
     this.alignment = Alignment.centerRight,
     this.duration = const Duration(milliseconds: 300),
@@ -31,6 +24,10 @@ class VerticalFloatingCard extends StatefulWidget {
 
 class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
   late bool _collapsed;
+  final List<_ChatMessage> _messages = [
+    _ChatMessage(text: "Hi! How can I help you today?", isUser: false),
+  ];
+  final TextEditingController _controller = TextEditingController();
 
   @override
   void initState() {
@@ -48,168 +45,104 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
 
   void _toggle() => setState(() => _collapsed = !_collapsed);
 
-  // Default content widget with iOS theming
-  Widget _buildDefaultContent() {
+  void _sendMessage() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    setState(() {
+      _messages.add(_ChatMessage(text: text, isUser: true));
+      _messages.add(_ChatMessage(text: "(This is a demo reply.)", isUser: false));
+      _controller.clear();
+    });
+  }
+
+  Widget _buildChatContent() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header with iOS style
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Quick Tools',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: CupertinoColors.label,
-                  letterSpacing: -0.5,
+        // Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Chat',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: CupertinoColors.label,
+                letterSpacing: -0.5,
+              ),
+            ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              minSize: 32,
+              onPressed: _toggle,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGrey5.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  _collapsed ? CupertinoIcons.chevron_left : CupertinoIcons.chevron_right,
+                  size: 18,
+                  color: CupertinoColors.systemGrey,
                 ),
               ),
-              // Collapse button
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                minSize: 32,
-                onPressed: _toggle,
+            ),
+          ],
+        ),
+        const Divider(height: 16),
+        // Chat messages
+        Expanded(
+          child: ListView.builder(
+            reverse: true,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: _messages.length,
+            itemBuilder: (context, index) {
+              final msg = _messages[_messages.length - 1 - index];
+              return Align(
+                alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
                 child: Container(
-                  padding: const EdgeInsets.all(6),
+                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                   decoration: BoxDecoration(
-                    color: CupertinoColors.systemGrey5.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(8),
+                    color: msg.isUser
+                        ? CupertinoColors.activeBlue
+                        : CupertinoColors.systemGrey5,
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Icon(
-                    _collapsed ? CupertinoIcons.chevron_left : CupertinoIcons.chevron_right,
-                    size: 18,
-                    color: CupertinoColors.systemGrey,
+                  child: Text(
+                    msg.text,
+                    style: TextStyle(
+                      color: msg.isUser ? Colors.white : CupertinoColors.label,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
+              );
+            },
+          ),
+        ),
+        // Input field
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: CupertinoTextField(
+                  controller: _controller,
+                  placeholder: "Type a message...",
+                  onSubmitted: (_) => _sendMessage(),
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                ),
+              ),
+              const SizedBox(width: 8),
+              CupertinoButton(
+                padding: const EdgeInsets.all(0),
+                minSize: 36,
+                onPressed: _sendMessage,
+                child: const Icon(CupertinoIcons.arrow_up_circle_fill, color: CupertinoColors.activeBlue, size: 32),
               ),
             ],
-          ),
-        ),
-        // Divider
-        Container(
-          height: 0.5,
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: const BoxDecoration(
-            color: CupertinoColors.separator,
-          ),
-        ),
-        // iOS-style list section
-        Expanded(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: CupertinoListSection.insetGrouped(
-              margin: EdgeInsets.zero,
-              backgroundColor: Colors.transparent,
-              decoration: BoxDecoration(
-                color: CupertinoColors.secondarySystemGroupedBackground,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              children: [
-                CupertinoListTile(
-                  backgroundColor: CupertinoColors.systemGroupedBackground,
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          CupertinoColors.systemBlue,
-                          CupertinoColors.systemBlue,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      CupertinoIcons.slider_horizontal_3,
-                      color: CupertinoColors.white,
-                      size: 20,
-                    ),
-                  ),
-                  title: const Text(
-                    'Filters',
-                    style: TextStyle(
-                      color: CupertinoColors.label,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  trailing: const Icon(
-                    CupertinoIcons.chevron_right,
-                    color: CupertinoColors.systemGrey3,
-                    size: 16,
-                  ),
-                  onTap: () {},
-                ),
-                CupertinoListTile(
-                  backgroundColor: CupertinoColors.systemGroupedBackground,
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          CupertinoColors.systemGreen,
-                          CupertinoColors.systemGreen,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      CupertinoIcons.share,
-                      color: CupertinoColors.white,
-                      size: 20,
-                    ),
-                  ),
-                  title: const Text(
-                    'Share',
-                    style: TextStyle(
-                      color: CupertinoColors.label,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  trailing: const Icon(
-                    CupertinoIcons.chevron_right,
-                    color: CupertinoColors.systemGrey3,
-                    size: 16,
-                  ),
-                  onTap: () {},
-                ),
-                CupertinoListTile(
-                  backgroundColor: CupertinoColors.systemGroupedBackground,
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          CupertinoColors.systemPurple,
-                          CupertinoColors.systemPurple,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      CupertinoIcons.chart_bar,
-                      color: CupertinoColors.white,
-                      size: 20,
-                    ),
-                  ),
-                  title: const Text(
-                    'Analytics',
-                    style: TextStyle(
-                      color: CupertinoColors.label,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  trailing: const Icon(
-                    CupertinoIcons.chevron_right,
-                    color: CupertinoColors.systemGrey3,
-                    size: 16,
-                  ),
-                  onTap: () {},
-                ),
-              ],
-            ),
           ),
         ),
       ],
@@ -219,7 +152,6 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
   @override
   Widget build(BuildContext context) {
     final anchoredRight = widget.alignment == Alignment.centerRight;
-    
     return SafeArea(
       child: Align(
         alignment: anchoredRight ? Alignment.centerRight : Alignment.centerLeft,
@@ -233,7 +165,6 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
               final availableHeight = constraints.maxHeight.isInfinite
                   ? MediaQuery.of(context).size.height - 32
                   : constraints.maxHeight;
-
               return SizedBox(
                 width: _collapsed ? widget.collapsedVisibleWidth : widget.width,
                 height: availableHeight,
@@ -274,7 +205,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                           ],
                         ),
                         padding: const EdgeInsets.all(16),
-                        child: widget.child ?? _buildDefaultContent(),
+                        child: _buildChatContent(),
                       ),
                     ),
                     // Tap target when collapsed - visible tab area
@@ -288,7 +219,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                         child: GestureDetector(
                           onTap: _toggle,
                           child: Container(
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: Colors.transparent,
                             ),
                             child: Center(
@@ -319,4 +250,10 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
       ),
     );
   }
+}
+
+class _ChatMessage {
+  final String text;
+  final bool isUser;
+  const _ChatMessage({required this.text, required this.isUser});
 }

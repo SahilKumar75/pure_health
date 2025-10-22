@@ -41,6 +41,8 @@ class _CustomSidebarState extends State<CustomSidebar> {
       GoRouter.of(context).go('/history');
     } else if (index == 3) {
       GoRouter.of(context).go('/settings');
+    } else if (index == 4) {
+      GoRouter.of(context).go('/chat');
     }
     widget.onItemSelected(index);
   }
@@ -218,6 +220,12 @@ class _CustomSidebarState extends State<CustomSidebar> {
               icon: CupertinoIcons.time,
               label: 'History',
               index: 2,
+            ),
+            // Chat button
+            _buildNavItem(
+              icon: CupertinoIcons.chat_bubble_2,
+              label: 'Chat',
+              index: 4,
             ),
             const Spacer(),
             // Bottom buttons
