@@ -2,19 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-
 import 'package:geolocator/geolocator.dart';
 
 class CustomMapWidget extends StatefulWidget {
   final double zoom;
   final List<Marker>? markers;
   final double sidebarWidth;
+  final MapController? mapController;
 
   const CustomMapWidget({
     Key? key,
     this.zoom = 13.0,
     this.markers,
     this.sidebarWidth = 72.0,
+    this.mapController,
   }) : super(key: key);
 
   @override
@@ -25,13 +26,11 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
   LatLng? _currentCenter;
   bool _loading = true;
   late final MapController _mapController;
-  double _currentZoom = 13.0;
 
   @override
   void initState() {
     super.initState();
-    _mapController = MapController();
-    _currentZoom = widget.zoom;
+    _mapController = widget.mapController ?? MapController();
     _determinePosition();
   }
 
@@ -59,6 +58,7 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
     if (_loading || _currentCenter == null) {
       return const Center(child: CircularProgressIndicator());
     }
+    
     // Build the current location marker
     final currentLocationMarker = Marker(
       point: _currentCenter!,
@@ -95,74 +95,32 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
     }
     allMarkers.add(currentLocationMarker);
 
-    return Stack(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 12,
-                offset: Offset(0, 2),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 12,
+            offset: Offset(0, 2),
           ),
-          child: FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: _currentCenter!,
-              initialZoom: _currentZoom,
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                subdomains: const ['a', 'b', 'c'],
-              ),
-              MarkerLayer(markers: allMarkers),
-            ],
-          ),
+        ],
+      ),
+      child: FlutterMap(
+        mapController: _mapController,
+        options: MapOptions(
+          initialCenter: _currentCenter!,
+          initialZoom: widget.zoom,
         ),
-        // Move zoom controls to bottom left, dynamically beside sidebar
-        Positioned(
-          bottom: 32,
-          left: widget.sidebarWidth + 8, // 8px gap from sidebar
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                minSize: 36,
-                borderRadius: BorderRadius.circular(18),
-                color: Colors.white.withOpacity(0.85),
-                child: const Icon(CupertinoIcons.plus, color: Colors.blueAccent, size: 24),
-                onPressed: () {
-                  setState(() {
-                    _currentZoom = (_currentZoom + 1).clamp(1.0, 18.0);
-                    _mapController.move(_currentCenter!, _currentZoom);
-                  });
-                },
-              ),
-              const SizedBox(height: 8),
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                minSize: 36,
-                borderRadius: BorderRadius.circular(18),
-                color: Colors.white.withOpacity(0.85),
-                child: const Icon(CupertinoIcons.minus, color: Colors.blueAccent, size: 24),
-                onPressed: () {
-                  setState(() {
-                    _currentZoom = (_currentZoom - 1).clamp(1.0, 18.0);
-                    _mapController.move(_currentCenter!, _currentZoom);
-                  });
-                },
-              ),
-            ],
+        children: [
+          TileLayer(
+            urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            subdomains: const ['a', 'b', 'c'],
           ),
-        ),
-      ],
+          MarkerLayer(markers: allMarkers),
+        ],
+      ),
     );
   }
 }
