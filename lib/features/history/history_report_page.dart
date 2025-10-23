@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/cupertino.dart';
 
-// Enhanced data model (no changes)
 class Report {
   final String id;
   final String title;
@@ -40,8 +39,9 @@ class HistoryReportPage extends StatefulWidget {
 class _HistoryReportPageState extends State<HistoryReportPage> {
   int _selectedIndex = 2;
   bool _isSidebarExpanded = false;
+  double _bottomCardHeight = 0.50; // Store as fraction of screen height
+  bool _isDragging = false;
 
-  // --- Data (no changes) ---
   final Report _latestSimulation = Report(
     id: 'latest',
     title: 'Live Water Quality Status',
@@ -89,21 +89,28 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
     _filteredReports = _allReports;
   }
 
-  // --- Helper Functions (no changes) ---
+  void _handleVerticalDrag(DragUpdateDetails details, double screenHeight) {
+    setState(() {
+      _isDragging = true;
+      // Calculate new height as fraction (subtract because drag down increases Y)
+      double newHeightFraction = _bottomCardHeight - (details.delta.dy / screenHeight);
+      // Clamp between 0.2 (20%) and 0.9 (90%)
+      _bottomCardHeight = newHeightFraction.clamp(0.2, 0.9);
+    });
+  }
 
   Future<void> _selectDateRangeCupertino() async {
     DateTime startDate = _selectedDateRange?.start ??
         DateTime.now().subtract(const Duration(days: 30));
     DateTime endDate = _selectedDateRange?.end ?? DateTime.now();
 
-    // First popup for start date
     await showCupertinoModalPopup(
       context: context,
       builder: (context) {
         DateTime tempDate = startDate;
         return Container(
           height: 300,
-          color: CupertinoColors.systemBackground.resolveFrom(context),
+          color: const Color(0xFF2A2A2A),
           child: Column(
             children: [
               SizedBox(
@@ -131,14 +138,13 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
       },
     );
 
-    // Second popup for end date
     await showCupertinoModalPopup(
       context: context,
       builder: (context) {
         DateTime tempDate = endDate;
         return Container(
           height: 300,
-          color: CupertinoColors.systemBackground.resolveFrom(context),
+          color: const Color(0xFF2A2A2A),
           child: Column(
             children: [
               SizedBox(
@@ -186,35 +192,33 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Safe':
-        return CupertinoColors.systemGreen;
+        return const Color(0xFF4CAF50);
       case 'Warning':
-        return CupertinoColors.systemOrange;
+        return const Color(0xFFFFA726);
       case 'Critical':
-        return CupertinoColors.systemRed;
+        return const Color(0xFFEF5350);
       default:
-        return CupertinoColors.systemGrey;
+        return const Color(0xFF9E9E9E);
     }
   }
 
   IconData _getStatusIcon(String status) {
     switch (status) {
       case 'Safe':
-        return CupertinoIcons.checkmark_shield_fill;
+        return CupertinoIcons.checkmark_circle_fill;
       case 'Warning':
         return CupertinoIcons.exclamationmark_triangle_fill;
       case 'Critical':
-        return CupertinoIcons.xmark_octagon_fill;
+        return CupertinoIcons.exclamationmark_circle_fill;
       default:
         return CupertinoIcons.info_circle_fill;
     }
   }
 
-  // --- Build Method (Restructured) ---
-
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final bottomCardHeight = screenHeight * 0.50;
+    final bottomCardHeight = screenHeight * _bottomCardHeight;
     final sidebarWidth = _isSidebarExpanded ? 216.0 : 88.0;
 
     final actionRequiredCount =
@@ -231,11 +235,9 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
         },
         child: Stack(
           children: [
-            // --- Map Background ---
             Positioned.fill(
               child: CustomMapWidget(),
             ),
-            // --- Sidebar ---
             Positioned(
               left: 0,
               top: 0,
@@ -256,7 +258,50 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                 },
               ),
             ),
-            // --- Main Content Card (Restructured) ---
+            // Drag handle bar
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              left: sidebarWidth,
+              right: 0,
+              bottom: bottomCardHeight,
+              height: 8,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.resizeUpDown,
+                child: GestureDetector(
+                  onVerticalDragUpdate: (details) => _handleVerticalDrag(details, screenHeight),
+                  onVerticalDragEnd: (details) {
+                    setState(() {
+                      _isDragging = false;
+                    });
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: _isDragging 
+                          ? Colors.white.withOpacity(0.3)
+                          : Colors.white.withOpacity(0.1),
+                      border: Border(
+                        top: BorderSide(
+                          color: Colors.white.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Bottom content panel
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
@@ -271,69 +316,76 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Column(
-                  // Main container is now a Column
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- 1. ADMIN OVERVIEW HEADER (Stays at top) ---
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Water Quality Monitoring',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Last updated: ${DateFormat('MMM d, y • HH:mm').format(_latestSimulation.date)}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.white70,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          'Last updated: ${DateFormat('MMM d, y • HH:mm').format(_latestSimulation.date)}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withOpacity(0.7),
+                            fontWeight: FontWeight.w500,
+                            fontFamily: 'SF Pro',
+                          ),
                         ),
                         if (actionRequiredCount > 0)
-                          _buildActionRequiredBadge(actionRequiredCount),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEF5350).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFFEF5350).withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  CupertinoIcons.exclamationmark_circle,
+                                  size: 14,
+                                  color: Color(0xFFEF5350),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '$actionRequiredCount Action Required',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFFEF5350),
+                                    fontFamily: 'SF Pro',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 16),
-
-                    // --- 2. SIDE-BY-SIDE CONTENT (SWAPPED) ---
                     Expanded(
-                      // This Expanded makes the Row fill the remaining vertical space
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // --- (NOW ON LEFT) HISTORICAL REPORTS ---
                           Expanded(
-                            flex: 2, // Takes 2 parts of the space (CHANGED)
+                            flex: 2,
                             child: _buildHistoricalReportsPanel(),
                           ),
-
-                          // --- Vertical Divider (CHANGED) ---
                           Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 12.0),
                             child: Container(
                               width: 1,
-                              color: Colors.white.withOpacity(0.2), // A subtle divider
+                              color: Colors.white.withOpacity(0.15),
                             ),
                           ),
-
-                          // --- (NOW ON RIGHT) CURRENT STATUS ---
                           Expanded(
-                            flex: 3, // Takes 3 parts of the space (CHANGED)
+                            flex: 3,
                             child: SingleChildScrollView(
-                              // Makes this panel scrollable if content overflows
                               child: _buildCurrentStatusPanel(),
                             ),
                           ),
@@ -350,51 +402,17 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
     );
   }
 
-  // --- New Widget Methods for Cleanliness ---
-
-  Widget _buildActionRequiredBadge(int actionRequiredCount) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 8,
-      ),
-      decoration: BoxDecoration(
-        color: CupertinoColors.systemRed.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: CupertinoColors.systemRed,
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            CupertinoIcons.exclamationmark_circle_fill,
-            size: 16,
-            color: CupertinoColors.systemRed,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            '$actionRequiredCount Action Required',
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: CupertinoColors.systemRed,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildCurrentStatusPanel() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
       ),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       child: Column(
         children: [
           Row(
@@ -403,16 +421,17 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: _getStatusColor(_latestSimulation.status)
-                      .withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
+                      .withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: _getStatusColor(_latestSimulation.status),
-                    width: 2,
+                    color: _getStatusColor(_latestSimulation.status)
+                        .withOpacity(0.3),
+                    width: 1,
                   ),
                 ),
                 child: Icon(
                   _getStatusIcon(_latestSimulation.status),
-                  size: 28,
+                  size: 24,
                   color: _getStatusColor(_latestSimulation.status),
                 ),
               ),
@@ -424,19 +443,21 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                     Text(
                       _latestSimulation.status.toUpperCase(),
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
                         color: _getStatusColor(_latestSimulation.status),
-                        letterSpacing: 1,
+                        letterSpacing: 0.5,
+                        fontFamily: 'SF Pro',
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       _latestSimulation.location,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Colors.white70,
+                        color: Colors.white.withOpacity(0.7),
                         fontWeight: FontWeight.w500,
+                        fontFamily: 'SF Pro',
                       ),
                     ),
                   ],
@@ -448,31 +469,32 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      CupertinoColors.activeBlue,
-                      CupertinoColors.systemBlue.withOpacity(0.8),
-                    ],
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 1,
                   ),
-                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   children: [
                     Text(
                       '${_latestSimulation.latestResults?['overallScore'] ?? 'N/A'}',
                       style: const TextStyle(
-                        fontSize: 28,
+                        fontSize: 26,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
+                        fontFamily: 'SF Pro',
                       ),
                     ),
-                    const Text(
+                    Text(
                       'SCORE',
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.white70,
+                        color: Colors.white.withOpacity(0.6),
                         fontWeight: FontWeight.w600,
-                        letterSpacing: 1,
+                        letterSpacing: 0.5,
+                        fontFamily: 'SF Pro',
                       ),
                     ),
                   ],
@@ -480,9 +502,9 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Divider(height: 1, color: Colors.white.withOpacity(0.1)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -491,21 +513,18 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                 '${_latestSimulation.latestResults?['pH'] ?? 'N/A'}',
                 'Normal: 6.5-8.5',
                 CupertinoIcons.drop_fill,
-                CupertinoColors.systemBlue,
               ),
               _buildMetricCard(
                 'Turbidity',
                 '${_latestSimulation.latestResults?['turbidity'] ?? 'N/A'} NTU',
                 'Limit: <5 NTU',
                 CupertinoIcons.eye_fill,
-                CupertinoColors.systemTeal,
               ),
               _buildMetricCard(
                 'Samples',
                 '${_latestSimulation.latestResults?['samplesAnalyzed'] ?? 'N/A'}',
                 'Last 24h',
                 CupertinoIcons.chart_bar_fill,
-                CupertinoColors.systemGreen,
               ),
             ],
           ),
@@ -517,7 +536,6 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
   Widget _buildHistoricalReportsPanel() {
     return Column(
       children: [
-        // --- HISTORICAL REPORTS HEADER ---
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -527,9 +545,10 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                 const Text(
                   'Historical Reports',
                   style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: CupertinoColors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    fontFamily: 'SF Pro',
                   ),
                 ),
                 if (_selectedDateRange != null)
@@ -537,9 +556,10 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       '${DateFormat.yMMMd().format(_selectedDateRange!.start)} - ${DateFormat.yMMMd().format(_selectedDateRange!.end)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: Colors.white70,
+                        color: Colors.white.withOpacity(0.6),
+                        fontFamily: 'SF Pro',
                       ),
                     ),
                   ),
@@ -552,26 +572,27 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                     padding: const EdgeInsets.only(right: 8),
                     child: CupertinoButton(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      color: CupertinoColors.systemGrey5.withOpacity(0.1),
+                          horizontal: 10, vertical: 6),
+                      color: Colors.white.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(8),
                       minSize: 0,
                       onPressed: _clearFilter,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: const [
+                        children: [
                           Icon(
-                            CupertinoIcons.xmark_circle_fill,
+                            CupertinoIcons.xmark_circle,
                             size: 14,
-                            color: CupertinoColors.systemGrey,
+                            color: Colors.white.withOpacity(0.7),
                           ),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 4),
                           Text(
-                            'Clear Filter',
+                            'Clear',
                             style: TextStyle(
                               fontSize: 12,
-                              color: CupertinoColors.systemGrey,
+                              color: Colors.white.withOpacity(0.7),
                               fontWeight: FontWeight.w600,
+                              fontFamily: 'SF Pro',
                             ),
                           ),
                         ],
@@ -580,8 +601,8 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                   ),
                 CupertinoButton(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  color: CupertinoColors.activeBlue,
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
                   minSize: 0,
                   onPressed: _selectDateRangeCupertino,
@@ -590,7 +611,7 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                     children: const [
                       Icon(
                         CupertinoIcons.calendar,
-                        size: 16,
+                        size: 14,
                         color: Colors.white,
                       ),
                       SizedBox(width: 6),
@@ -600,6 +621,7 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                           fontSize: 12,
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
+                          fontFamily: 'SF Pro',
                         ),
                       ),
                     ],
@@ -610,89 +632,84 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
           ],
         ),
         const SizedBox(height: 12),
-
-        // --- REPORTS LIST (SCROLLABLE) ---
         Expanded(
-          // This makes the list fill the vertical space
           child: _filteredReports.isEmpty
               ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          CupertinoIcons.doc_text_search,
-                          size: 48,
-                          color: Colors.white.withOpacity(0.4),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        CupertinoIcons.doc_text_search,
+                        size: 48,
+                        color: Colors.white.withOpacity(0.3),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No reports found for selected period',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white.withOpacity(0.6),
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'SF Pro',
                         ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'No reports found for selected period',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white70,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 )
               : ListView.builder(
-                  // Use ListView.builder for scrolling
                   itemCount: _filteredReports.length,
                   itemBuilder: (context, index) {
                     final report = _filteredReports[index];
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.only(bottom: 8),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(14),
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.1),
+                            width: 1,
+                          ),
                         ),
-                        padding: EdgeInsets.zero,
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(12),
                             onTap: () {
                               context.go('/reports/${report.id}');
                             },
                             child: Padding(
-                              padding: const EdgeInsets.all(14),
+                              padding: const EdgeInsets.all(12),
                               child: Row(
                                 children: [
                                   Container(
-                                    width: 4,
-                                    height: 52,
+                                    width: 3,
+                                    height: 48,
                                     decoration: BoxDecoration(
                                       color: _getStatusColor(report.status),
-                                      borderRadius:
-                                          BorderRadius.circular(2),
+                                      borderRadius: BorderRadius.circular(2),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          _getStatusColor(report.status),
-                                          _getStatusColor(report.status)
-                                              .withOpacity(0.7),
-                                        ],
+                                      color: _getStatusColor(report.status)
+                                          .withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: _getStatusColor(report.status)
+                                            .withOpacity(0.3),
+                                        width: 1,
                                       ),
-                                      borderRadius:
-                                          BorderRadius.circular(10),
                                     ),
-                                    child: const Icon(
-                                      CupertinoIcons.doc_chart_fill,
-                                      color: Colors.white,
-                                      size: 20,
+                                    child: Icon(
+                                      CupertinoIcons.doc_text_fill,
+                                      color: _getStatusColor(report.status),
+                                      size: 18,
                                     ),
                                   ),
-                                  const SizedBox(width: 14),
+                                  const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -704,147 +721,121 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                                               child: Text(
                                                 report.title,
                                                 style: const TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.w600,
-                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13,
                                                   color: Colors.white,
+                                                  fontFamily: 'SF Pro',
                                                 ),
                                               ),
                                             ),
                                             if (report.requiresAction)
                                               Container(
-                                                margin:
-                                                    const EdgeInsets.only(
-                                                        left: 8),
+                                                margin: const EdgeInsets.only(
+                                                    left: 8),
                                                 padding:
-                                                    const EdgeInsets
-                                                        .symmetric(
+                                                    const EdgeInsets.symmetric(
                                                   horizontal: 6,
                                                   vertical: 3,
                                                 ),
-                                                decoration:
-                                                    BoxDecoration(
-                                                  color: CupertinoColors
-                                                      .systemRed
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFEF5350)
                                                       .withOpacity(0.15),
                                                   borderRadius:
-                                                      BorderRadius
-                                                          .circular(5),
+                                                      BorderRadius.circular(4),
+                                                  border: Border.all(
+                                                    color: const Color(0xFFEF5350)
+                                                        .withOpacity(0.3),
+                                                    width: 1,
+                                                  ),
                                                 ),
                                                 child: const Text(
                                                   'ACTION',
                                                   style: TextStyle(
                                                     fontSize: 9,
-                                                    fontWeight:
-                                                        FontWeight.bold,
-                                                    color: CupertinoColors
-                                                        .systemRed,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFFEF5350),
                                                     letterSpacing: 0.5,
+                                                    fontFamily: 'SF Pro',
                                                   ),
                                                 ),
                                               ),
                                           ],
                                         ),
-                                        const SizedBox(height: 5),
+                                        const SizedBox(height: 6),
                                         Row(
                                           children: [
-                                            const Icon(
+                                            Icon(
                                               CupertinoIcons.location_solid,
                                               size: 11,
-                                              color: Colors.white70,
+                                              color:
+                                                  Colors.white.withOpacity(0.6),
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
                                               report.location,
-                                              style: const TextStyle(
-                                                color: Colors.white70,
+                                              style: TextStyle(
+                                                color: Colors.white
+                                                    .withOpacity(0.6),
                                                 fontSize: 11,
-                                                fontWeight:
-                                                    FontWeight.w500,
+                                                fontWeight: FontWeight.w500,
+                                                fontFamily: 'SF Pro',
                                               ),
                                             ),
-                                            const SizedBox(width: 12),
-                                            const Icon(
+                                            const SizedBox(width: 10),
+                                            Icon(
                                               CupertinoIcons.time,
                                               size: 11,
-                                              color: Colors.white70,
+                                              color:
+                                                  Colors.white.withOpacity(0.6),
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
                                               DateFormat('MMM d, y')
                                                   .format(report.date),
-                                              style: const TextStyle(
-                                                color: Colors.white70,
+                                              style: TextStyle(
+                                                color: Colors.white
+                                                    .withOpacity(0.6),
                                                 fontSize: 11,
-                                                fontWeight:
-                                                    FontWeight.w500,
+                                                fontWeight: FontWeight.w500,
+                                                fontFamily: 'SF Pro',
                                               ),
                                             ),
-                                            if (report.criticalParameters >
-                                                0) ...[
-                                              const SizedBox(width: 12),
-                                              const Icon(
-                                                CupertinoIcons
-                                                    .exclamationmark_triangle_fill,
-                                                size: 11,
-                                                color: CupertinoColors
-                                                    .systemOrange,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                '${report.criticalParameters} critical',
-                                                style: const TextStyle(
-                                                  color: CupertinoColors
-                                                      .systemOrange,
-                                                  fontSize: 11,
-                                                  fontWeight:
-                                                      FontWeight.w600,
-                                                ),
-                                              ),
-                                            ],
                                           ],
                                         ),
                                       ],
                                     ),
                                   ),
-                                  Column(
-                                    children: [
-                                      Container(
-                                        padding:
-                                            const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 5,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: _getStatusColor(
-                                                  report.status)
-                                              .withOpacity(0.2),
-                                          borderRadius:
-                                              BorderRadius.circular(7),
-                                          border: Border.all(
-                                            color: _getStatusColor(
-                                                report.status),
-                                            width: 1,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          report.status.toUpperCase(),
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: _getStatusColor(
-                                                report.status),
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _getStatusColor(report.status)
+                                          .withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: _getStatusColor(report.status)
+                                            .withOpacity(0.3),
+                                        width: 1,
                                       ),
-                                    ],
+                                    ),
+                                    child: Text(
+                                      report.status.toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: _getStatusColor(report.status),
+                                        letterSpacing: 0.3,
+                                        fontFamily: 'SF Pro',
+                                      ),
+                                    ),
                                   ),
-                                  const SizedBox(width: 10),
-                                  const Icon(
+                                  const SizedBox(width: 8),
+                                  Icon(
                                     CupertinoIcons.chevron_right,
-                                    size: 18,
-                                    color: Colors.white70,
+                                    size: 16,
+                                    color: Colors.white.withOpacity(0.5),
                                   ),
                                 ],
                               ),
@@ -865,45 +856,51 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
     String value,
     String subtitle,
     IconData icon,
-    Color color,
   ) {
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
+            color: Colors.white.withOpacity(0.08),
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.15),
+              width: 1,
+            ),
           ),
           child: Icon(
             icon,
             size: 22,
-            color: color,
+            color: Colors.white.withOpacity(0.9),
           ),
         ),
         const SizedBox(height: 8),
         Text(
           value,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: 15,
             fontWeight: FontWeight.bold,
             color: Colors.white,
+            fontFamily: 'SF Pro',
           ),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
-            color: CupertinoColors.white,
+            color: Colors.white.withOpacity(0.9),
             fontWeight: FontWeight.w600,
+            fontFamily: 'SF Pro',
           ),
         ),
         Text(
           subtitle,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 9,
-            color: Colors.white70,
+            color: Colors.white.withOpacity(0.6),
+            fontFamily: 'SF Pro',
           ),
         ),
       ],
