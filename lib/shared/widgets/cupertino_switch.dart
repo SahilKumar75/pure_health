@@ -22,7 +22,7 @@ class CupertinoSwitchWidget extends StatelessWidget {
       onChanged: onChanged,
       activeColor: activeColor ?? AppColors.darkVanilla,
       inactiveThumbColor: Colors.grey,
-      inactiveTrackColor: AppColors.lightGray,
+      inactiveTrackColor: AppColors.dimText,
     );
   }
 }

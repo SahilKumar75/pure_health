@@ -1,25 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
+import '../../../app/config/app_router.dart';
 import '../../../core/constants/color_constants.dart';
 import '../../../core/theme/text_styles.dart';
-
-// Notification class to communicate sidebar expansion state
-class SidebarExpandNotification extends Notification {
-  final bool isExpanded;
-
-  SidebarExpandNotification(this.isExpanded);
-}
 
 class CustomSidebar extends StatefulWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
 
   const CustomSidebar({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onItemSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<CustomSidebar> createState() => _CustomSidebarState();
@@ -28,64 +22,22 @@ class CustomSidebar extends StatefulWidget {
 class _CustomSidebarState extends State<CustomSidebar> {
   bool isExpanded = false;
 
-  // Navigation items list
-  final List<Map<String, dynamic>> navigationItems = [
-    {
-      'icon': CupertinoIcons.home,
-      'label': 'Home',
-      'index': 0,
-      'route': '/',
-    },
-    {
-      'icon': CupertinoIcons.chart_bar_fill,
-      'label': 'Dashboard',
-      'index': 1,
-      'route': '/dashboard',
-    },
-    {
-      'icon': CupertinoIcons.time,
-      'label': 'History',
-      'index': 2,
-      'route': '/history',
-    },
-    {
-      'icon': CupertinoIcons.settings,
-      'label': 'Settings',
-      'index': 3,
-      'route': '/settings',
-    },
-    {
-      'icon': CupertinoIcons.chat_bubble_2,
-      'label': 'Chat',
-      'index': 4,
-      'route': '/chat',
-    },
-  ];
-
   void _handleNavigation(int index) {
     try {
-      // Find the route for this index
-      final item = navigationItems.firstWhere(
-        (item) => item['index'] == index,
-        orElse: () => {'route': '/'},
-      );
-
-      // Only navigate if GoRouter is available in context
+      final route = AppRouter.getRouteByIndex(index);
       if (context.mounted && GoRouter.maybeOf(context) != null) {
-        context.go(item['route']);
+        context.go(route);
+        widget.onItemSelected(index);
       }
     } catch (e) {
-      debugPrint('Navigation error: $e');
+      debugPrint('❌ Navigation error: $e');
     }
-    widget.onItemSelected(index);
   }
 
   void _toggleExpansion() {
     setState(() {
       isExpanded = !isExpanded;
     });
-    // Send notification to parent widgets
-    SidebarExpandNotification(isExpanded).dispatch(context);
   }
 
   Widget _buildNavItem({
@@ -111,10 +63,10 @@ class _CustomSidebarState extends State<CustomSidebar> {
             padding: EdgeInsets.all(isExpanded ? 12.0 : 10.0),
             decoration: isSelected
                 ? BoxDecoration(
-                    color: AppColors.darkVanilla.withOpacity(0.2),
+                    color: AppColors.accentPink.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(isExpanded ? 16 : 32),
                     border: Border.all(
-                      color: AppColors.darkVanilla.withOpacity(0.4),
+                      color: AppColors.accentPink.withOpacity(0.3),
                       width: 1.5,
                     ),
                   )
@@ -126,8 +78,8 @@ class _CustomSidebarState extends State<CustomSidebar> {
                       Icon(
                         icon,
                         color: isSelected
-                            ? AppColors.darkVanilla
-                            : AppColors.charcoal,
+                            ? AppColors.accentPink
+                            : AppColors.mediumText,
                         size: 22,
                       ),
                       const SizedBox(width: 12),
@@ -137,8 +89,8 @@ class _CustomSidebarState extends State<CustomSidebar> {
                           label,
                           style: AppTextStyles.button.copyWith(
                             color: isSelected
-                                ? AppColors.darkVanilla
-                                : AppColors.charcoal,
+                                ? AppColors.accentPink
+                                : AppColors.mediumText,
                             fontWeight: isSelected
                                 ? FontWeight.w600
                                 : FontWeight.w400,
@@ -152,8 +104,8 @@ class _CustomSidebarState extends State<CustomSidebar> {
                     child: Icon(
                       icon,
                       color: isSelected
-                          ? AppColors.darkVanilla
-                          : AppColors.charcoal,
+                          ? AppColors.accentPink
+                          : AppColors.mediumText,
                       size: 22,
                     ),
                   ),
@@ -167,11 +119,10 @@ class _CustomSidebarState extends State<CustomSidebar> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.zero,
+        color: AppColors.darkBg2,
         border: Border(
           right: BorderSide(
-            color: AppColors.darkCream.withOpacity(0.2),
+            color: AppColors.borderLight,
             width: 1,
           ),
         ),
@@ -183,7 +134,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
         width: isExpanded ? 200 : 72,
         child: Column(
           children: [
-            // Menu button
+            // Toggle button
             Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: isExpanded ? 8.0 : 4.0,
@@ -199,7 +150,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
                   child: Container(
                     padding: EdgeInsets.all(isExpanded ? 12.0 : 10.0),
                     decoration: BoxDecoration(
-                      color: AppColors.darkCream.withOpacity(0.15),
+                      color: AppColors.darkBg3,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: isExpanded
@@ -208,16 +159,17 @@ class _CustomSidebarState extends State<CustomSidebar> {
                             children: [
                               Icon(
                                 CupertinoIcons.sidebar_left,
-                                color: AppColors.charcoal,
+                                color: AppColors.accentPink,
+                                size: 18,
                               ),
                               const SizedBox(width: 12),
                               Flexible(
-                                fit: FlexFit.loose,
                                 child: Text(
                                   'Menu',
                                   style: AppTextStyles.button.copyWith(
                                     fontWeight: FontWeight.w600,
-                                    color: AppColors.charcoal,
+                                    color: AppColors.lightText,
+                                    fontSize: 14,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -227,7 +179,8 @@ class _CustomSidebarState extends State<CustomSidebar> {
                         : Center(
                             child: Icon(
                               CupertinoIcons.bars,
-                              color: AppColors.charcoal,
+                              color: AppColors.accentPink,
+                              size: 18,
                             ),
                           ),
                   ),
@@ -239,25 +192,26 @@ class _CustomSidebarState extends State<CustomSidebar> {
             // Navigation items
             Expanded(
               child: ListView.builder(
-                itemCount: navigationItems.length,
+                itemCount: AppRouter.navigationItems.length,
                 itemBuilder: (context, index) {
-                  final item = navigationItems[index];
+                  final item = AppRouter.navigationItems[index];
+                  final iconMap = {
+                    'home': CupertinoIcons.home,
+                    'dashboard': CupertinoIcons.chart_bar_fill,
+                    'history': CupertinoIcons.time,
+                    'settings': CupertinoIcons.settings,
+                    'chat': CupertinoIcons.chat_bubble_2,
+                    'reports': CupertinoIcons.doc_fill,
+                    'profile': CupertinoIcons.person_circle,
+                  };
+
                   return _buildNavItem(
-                    icon: item['icon'] as IconData,
+                    icon: iconMap[item['icon']] ?? CupertinoIcons.home,
                     label: item['label'] as String,
                     index: item['index'] as int,
                   );
                 },
               ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Bottom buttons (Profile)
-            _buildNavItem(
-              icon: CupertinoIcons.person_circle,
-              label: 'Profile',
-              index: 5,
             ),
           ],
         ),

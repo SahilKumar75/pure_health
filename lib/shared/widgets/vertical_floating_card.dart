@@ -216,7 +216,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                         decoration: BoxDecoration(
                           color: msg.isUser
                               ? AppColors.darkCream.withOpacity(0.2)
-                              : AppColors.lightGray,
+                              : AppColors.dimText,
                           borderRadius: msg.isUser
                               ? const BorderRadius.only(
                                   topLeft: Radius.circular(18),
