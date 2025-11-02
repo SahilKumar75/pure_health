@@ -7,6 +7,7 @@ import 'package:pure_health/features/chat/presentation/pages/chat_page.dart';
 import 'package:pure_health/features/history/history_report_page.dart';
 import 'package:pure_health/features/settings/presentation/pages/settings_page.dart';
 import 'package:pure_health/features/profile/presentation/pages/profile_page.dart';
+import 'package:pure_health/features/dashboard/presentation/pages/dashboard_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -27,6 +28,10 @@ class MyApp extends StatelessWidget {
         path: '/',
         name: 'home',
         builder: (context, state) => const HomePage(),
+      ),
+      GoRoute(
+        path: '/dashboard',
+        builder: (context, state) => const DashboardPage(),
       ),
       GoRoute(
         path: '/chat',

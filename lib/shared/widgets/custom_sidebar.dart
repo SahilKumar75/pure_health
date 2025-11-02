@@ -28,21 +28,51 @@ class CustomSidebar extends StatefulWidget {
 class _CustomSidebarState extends State<CustomSidebar> {
   bool isExpanded = false;
 
+  // Navigation items list
+  final List<Map<String, dynamic>> navigationItems = [
+    {
+      'icon': CupertinoIcons.home,
+      'label': 'Home',
+      'index': 0,
+      'route': '/',
+    },
+    {
+      'icon': CupertinoIcons.chart_bar_fill,
+      'label': 'Dashboard',
+      'index': 1,
+      'route': '/dashboard',
+    },
+    {
+      'icon': CupertinoIcons.time,
+      'label': 'History',
+      'index': 2,
+      'route': '/history',
+    },
+    {
+      'icon': CupertinoIcons.settings,
+      'label': 'Settings',
+      'index': 3,
+      'route': '/settings',
+    },
+    {
+      'icon': CupertinoIcons.chat_bubble_2,
+      'label': 'Chat',
+      'index': 4,
+      'route': '/chat',
+    },
+  ];
+
   void _handleNavigation(int index) {
     try {
+      // Find the route for this index
+      final item = navigationItems.firstWhere(
+        (item) => item['index'] == index,
+        orElse: () => {'route': '/'},
+      );
+
       // Only navigate if GoRouter is available in context
       if (context.mounted && GoRouter.maybeOf(context) != null) {
-        if (index == 0) {
-          context.go('/');
-        } else if (index == 1) {
-          context.go('/profile');
-        } else if (index == 2) {
-          context.go('/history');
-        } else if (index == 3) {
-          context.go('/settings');
-        } else if (index == 4) {
-          context.go('/chat');
-        }
+        context.go(item['route']);
       }
     } catch (e) {
       debugPrint('Navigation error: $e');
@@ -204,43 +234,30 @@ class _CustomSidebarState extends State<CustomSidebar> {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
-            // Home button
-            _buildNavItem(
-              icon: CupertinoIcons.home,
-              label: 'Home',
-              index: 0,
+            const SizedBox(height: 16),
+
+            // Navigation items
+            Expanded(
+              child: ListView.builder(
+                itemCount: navigationItems.length,
+                itemBuilder: (context, index) {
+                  final item = navigationItems[index];
+                  return _buildNavItem(
+                    icon: item['icon'] as IconData,
+                    label: item['label'] as String,
+                    index: item['index'] as int,
+                  );
+                },
+              ),
             ),
-            // History button
+
+            const SizedBox(height: 16),
+
+            // Bottom buttons (Profile)
             _buildNavItem(
-              icon: CupertinoIcons.time,
-              label: 'History',
-              index: 2,
-            ),
-            // Chat button
-            _buildNavItem(
-              icon: CupertinoIcons.chat_bubble_2,
-              label: 'Chat',
-              index: 4,
-            ),
-            const Spacer(),
-            // Bottom buttons
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Profile button
-                _buildNavItem(
-                  icon: CupertinoIcons.person_circle,
-                  label: 'Profile',
-                  index: 1,
-                ),
-                // Settings button
-                _buildNavItem(
-                  icon: CupertinoIcons.settings,
-                  label: 'Settings',
-                  index: 3,
-                ),
-              ],
+              icon: CupertinoIcons.person_circle,
+              label: 'Profile',
+              index: 5,
             ),
           ],
         ),

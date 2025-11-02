@@ -40,4 +40,44 @@ class MLRepository {
   Future<PredictionResponse> makePrediction(PredictionRequest request) {
     return mlService.makePrediction(request);
   }
+
+  /// Analyze uploaded file data
+  Future<Map<String, dynamic>> analyzeFile({
+    required String fileName,
+    required String content,
+  }) async {
+    try {
+      return await mlService.apiClient.post(
+        '/files/analyze',
+        body: {
+          'fileName': fileName,
+          'content': content,
+        },
+      );
+    } catch (e) {
+      throw Exception('File analysis failed: $e');
+    }
+  }
+
+  /// Generate report
+  Future<Map<String, dynamic>> generateReport({
+    required String title,
+    required String format,
+    required List<Map<String, dynamic>> messages,
+  }) async {
+    try {
+      return await mlService.apiClient.post(
+        '/report/generate',
+        body: {
+          'title': title,
+          'format': format,
+          'messages': messages,
+          'totalMessages': messages.length,
+          'generatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      throw Exception('Report generation failed: $e');
+    }
+  }
 }

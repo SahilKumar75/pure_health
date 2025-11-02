@@ -1,9 +1,12 @@
 class MLConstants {
-  // API Configuration
-  static const String baseUrl = 'http://10.0.2.2:8000/api'; // Android emulator
-  // For physical device or iOS: use actual IP like 'http://192.168.x.x:8000/api'
+  // For macOS local machine, use your IP address from the terminal
+  // From your terminal output: Running on http://192.168.223.121:8000
+  static const String baseUrl = 'http://192.168.223.121:8000/api';
   
-  static const String mlServerUrl = 'http://10.0.2.2:5000';
+  // Alternative: If running on same Mac in simulator
+  // static const String baseUrl = 'http://localhost:8000/api';
+  
+  static const String mlServerUrl = 'http://192.168.223.121:5000';
   static const Duration requestTimeout = Duration(seconds: 30);
 
   // Model Endpoints

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:pure_health/core/constants/color_constants.dart';
 import 'package:pure_health/core/theme/text_styles.dart';
 import 'package:pure_health/shared/widgets/custom_sidebar.dart';
@@ -21,12 +21,12 @@ class _ChatPageState extends State<ChatPage> {
   final _focusNode = FocusNode();
   late ScrollController _scrollController;
   late ChatProvider _chatProvider;
+  List<PlatformFile>? _selectedFiles;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    // Create provider instance here
     _chatProvider = ChatProvider(MLRepository());
   }
 
@@ -39,28 +39,71 @@ class _ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
+  Future<void> _pickFiles() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: FileType.custom,
+      allowedExtensions: ['csv', 'xlsx', 'xls', 'json', 'txt', 'pdf'],
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedFiles = result.files;
+      });
+
+      // Send files for analysis
+      _analyzeFiles(result.files);
+    }
+  }
+
+  Future<void> _analyzeFiles(List<PlatformFile> files) async {
+    String fileInfo = files
+        .map((f) => '📄 ${f.name} (${(f.size / 1024).toStringAsFixed(2)} KB)')
+        .join('\n');
+
+    // Create message about files
+    final chatRequest = ChatRequest(
+      message: 'Please analyze these water data files:\n$fileInfo',
+      userId: 'gov_user_001',
+      sessionId: 'session_${DateTime.now().millisecondsSinceEpoch}',
+      timestamp: DateTime.now(),
+      context: {
+        'app': 'PureHealth',
+        'feature': 'GovernmentAIAnalyst',
+        'fileCount': files.length,
+        'fileNames': files.map((f) => f.name).toList(),
+      },
+    );
+
+    await _chatProvider.sendMessage(chatRequest);
+    _scrollToBottom();
+  }
+
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
 
     final message = _messageController.text.trim();
     _messageController.clear();
+    setState(() {
+      _selectedFiles = null;
+    });
 
-    // Create chat request
     final chatRequest = ChatRequest(
       message: message,
-      userId: 'user_001',
+      userId: 'gov_user_001',
       sessionId: 'session_${DateTime.now().millisecondsSinceEpoch}',
       timestamp: DateTime.now(),
       context: {
         'app': 'PureHealth',
-        'feature': 'WaterQualityChat',
+        'feature': 'GovernmentAIAnalyst',
       },
     );
 
-    // Call provider method directly
     _chatProvider.sendMessage(chatRequest);
+    _scrollToBottom();
+  }
 
-    // Scroll to bottom
+  void _scrollToBottom() {
     Future.delayed(const Duration(milliseconds: 100), () {
       _scrollController.animateTo(
         _scrollController.position.minScrollExtent,
@@ -70,15 +113,56 @@ class _ChatPageState extends State<ChatPage> {
     });
   }
 
-  void _showWaterQualityInput() {
-    showModalBottomSheet(
+  void _generateReport() {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _WaterQualityInputDialog(
-        onSubmit: (data) {
-          _chatProvider.predictWaterQuality(data);
-        },
+      builder: (context) => _ReportGenerationDialog(
+        chatProvider: _chatProvider,
+      ),
+    );
+  }
+
+  void _exportChat() {
+    // Export entire chat conversation as PDF/CSV
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.white,
+        title: Text(
+          'Export Chat Conversation',
+          style: AppTextStyles.heading4.copyWith(
+            color: AppColors.charcoal,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(
+                'Export as PDF',
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.charcoal,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _chatProvider.exportAsPDF();
+              },
+            ),
+            ListTile(
+              title: Text(
+                'Export as CSV',
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.charcoal,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _chatProvider.exportAsCSV();
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -103,13 +187,12 @@ class _ChatPageState extends State<ChatPage> {
               Expanded(
                 child: Column(
                   children: [
-                    // Header
                     _buildHeader(),
-                    // Messages
                     Expanded(
                       child: _buildMessagesArea(),
                     ),
-                    // Input Area
+                    if (_selectedFiles != null && _selectedFiles!.isNotEmpty)
+                      _buildFilePreview(),
                     _buildInputArea(),
                   ],
                 ),
@@ -140,73 +223,105 @@ class _ChatPageState extends State<ChatPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'PureHealth AI Assistant',
+                'Government Water AI Assistant',
                 style: AppTextStyles.heading3.copyWith(
                   color: AppColors.charcoal,
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                _chatProvider.isConnected ? '🟢 Connected' : '🔴 Disconnected',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: _chatProvider.isConnected
-                      ? AppColors.success
-                      : AppColors.error,
-                ),
-              ),
-            ],
-          ),
-          // Clear Chat Button
-          CupertinoButton(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: AppColors.white,
-                  title: Text(
-                    'Clear Chat',
-                    style: AppTextStyles.heading4.copyWith(
-                      color: AppColors.charcoal,
+              Row(
+                children: [
+                  Text(
+                    _chatProvider.isConnected ? '🟢 Connected' : '🔴 Disconnected',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: _chatProvider.isConnected
+                          ? AppColors.success
+                          : AppColors.error,
                     ),
                   ),
-                  content: Text(
-                    'Are you sure you want to clear chat history?',
-                    style: AppTextStyles.body.copyWith(
+                  const SizedBox(width: 12),
+                  Text(
+                    '${_chatProvider.messages.length} messages',
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.mediumGray,
                     ),
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        'Cancel',
-                        style: AppTextStyles.button.copyWith(
+                ],
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              CupertinoButton(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                onPressed: _generateReport,
+                child: Icon(
+                  CupertinoIcons.doc_fill,
+                  color: AppColors.darkVanilla,
+                  size: 20,
+                ),
+              ),
+              CupertinoButton(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                onPressed: _exportChat,
+                child: Icon(
+                  CupertinoIcons.arrow_down_to_line,
+                  color: AppColors.darkVanilla,
+                  size: 20,
+                ),
+              ),
+              CupertinoButton(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      backgroundColor: AppColors.white,
+                      title: Text(
+                        'Clear Chat',
+                        style: AppTextStyles.heading4.copyWith(
+                          color: AppColors.charcoal,
+                        ),
+                      ),
+                      content: Text(
+                        'Clear all conversation history?',
+                        style: AppTextStyles.body.copyWith(
                           color: AppColors.mediumGray,
                         ),
                       ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _chatProvider.clearChat();
-                      },
-                      child: Text(
-                        'Clear',
-                        style: AppTextStyles.button.copyWith(
-                          color: AppColors.error,
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            'Cancel',
+                            style: AppTextStyles.button.copyWith(
+                              color: AppColors.mediumGray,
+                            ),
+                          ),
                         ),
-                      ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _chatProvider.clearChat();
+                          },
+                          child: Text(
+                            'Clear',
+                            style: AppTextStyles.button.copyWith(
+                              color: AppColors.error,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  );
+                },
+                child: Icon(
+                  CupertinoIcons.trash,
+                  color: AppColors.mediumGray,
+                  size: 20,
                 ),
-              );
-            },
-            child: Icon(
-              CupertinoIcons.trash,
-              color: AppColors.mediumGray,
-              size: 20,
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -220,23 +335,40 @@ class _ChatPageState extends State<ChatPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              CupertinoIcons.chat_bubble_2,
-              size: 64,
-              color: AppColors.darkCream.withOpacity(0.3),
+              CupertinoIcons.bubble_left_bubble_right_fill,
+              size: 80,
+              color: AppColors.darkCream.withOpacity(0.2),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Text(
-              'Start a conversation',
-              style: AppTextStyles.heading4.copyWith(
-                color: AppColors.mediumGray,
+              'Government Water Data Analysis',
+              style: AppTextStyles.heading3.copyWith(
+                color: AppColors.charcoal,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Ask about water quality or get recommendations',
+              'Analyze water quality data through conversation',
               style: AppTextStyles.body.copyWith(
-                color: AppColors.mediumGray.withOpacity(0.7),
+                color: AppColors.mediumGray,
               ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Features:',
+              style: AppTextStyles.heading4.copyWith(
+                color: AppColors.charcoal,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Column(
+              children: [
+                _buildFeatureBullet('Chat-based analysis'),
+                _buildFeatureBullet('File upload (CSV, Excel, JSON)'),
+                _buildFeatureBullet('Real-time ML predictions'),
+                _buildFeatureBullet('Report generation'),
+                _buildFeatureBullet('Data export'),
+              ],
             ),
           ],
         ),
@@ -252,10 +384,33 @@ class _ChatPageState extends State<ChatPage> {
         final message = _chatProvider
             .messages[_chatProvider.messages.length - 1 - index];
         return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.only(bottom: 16),
           child: _buildMessageBubble(message),
         );
       },
+    );
+  }
+
+  Widget _buildFeatureBullet(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            CupertinoIcons.checkmark_circle_fill,
+            size: 16,
+            color: AppColors.darkVanilla,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.charcoal,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -268,27 +423,27 @@ class _ChatPageState extends State<ChatPage> {
       children: [
         if (!isUser) ...[
           Container(
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: AppColors.darkVanilla.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: AppColors.darkVanilla.withOpacity(0.3),
                 width: 1,
               ),
             ),
             child: Icon(
-              CupertinoIcons.sparkles,
+              Icons.psychology,
               color: AppColors.darkVanilla,
-              size: 18,
+              size: 20,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
         ],
         Flexible(
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 500),
+            constraints: const BoxConstraints(maxWidth: 600),
             padding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 12,
@@ -321,7 +476,7 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                 ),
                 if (message.metadata != null) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   _buildMetadata(message.metadata!),
                 ],
                 if (!isUser && message.confidence != null) ...[
@@ -339,13 +494,13 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ),
         if (isUser) ...[
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Container(
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: AppColors.darkVanilla.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: AppColors.darkVanilla.withOpacity(0.3),
                 width: 1,
@@ -354,7 +509,7 @@ class _ChatPageState extends State<ChatPage> {
             child: Icon(
               CupertinoIcons.person_fill,
               color: AppColors.darkVanilla,
-              size: 18,
+              size: 20,
             ),
           ),
         ],
@@ -365,43 +520,130 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildMetadata(Map<String, dynamic> metadata) {
     if (metadata.containsKey('recommendations')) {
       final recommendations = metadata['recommendations'] as List?;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Recommendations:',
-            style: AppTextStyles.buttonSmall.copyWith(
-              color: AppColors.charcoal,
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.darkVanilla.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Recommendations:',
+              style: AppTextStyles.buttonSmall.copyWith(
+                color: AppColors.charcoal,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          ...?recommendations?.map((rec) {
-            return Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Row(
-                children: [
-                  Text(
-                    '• ',
-                    style: AppTextStyles.body.copyWith(
-                      color: AppColors.darkVanilla,
-                    ),
-                  ),
-                  Flexible(
-                    child: Text(
-                      rec.toString(),
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.charcoal,
+            const SizedBox(height: 8),
+            ...?recommendations?.map((rec) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '→ ',
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.darkVanilla,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
+                    Flexible(
+                      child: Text(
+                        rec.toString(),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.charcoal,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
       );
     }
     return const SizedBox.shrink();
+  }
+
+  Widget _buildFilePreview() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.darkCream.withOpacity(0.1),
+        border: Border(
+          top: BorderSide(
+            color: AppColors.darkCream.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            Text(
+              'Attached Files: ',
+              style: AppTextStyles.buttonSmall.copyWith(
+                color: AppColors.charcoal,
+              ),
+            ),
+            ..._selectedFiles!.map((file) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.darkVanilla.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.darkVanilla.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _getFileIcon(file.extension ?? ''),
+                        size: 14,
+                        color: AppColors.darkVanilla,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        file.name,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.charcoal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getFileIcon(String extension) {
+    switch (extension.toLowerCase()) {
+      case 'csv':
+        return CupertinoIcons.table;
+      case 'xlsx':
+      case 'xls':
+        return CupertinoIcons.table;
+      case 'pdf':
+        return CupertinoIcons.doc_fill;
+      case 'json':
+        return CupertinoIcons.doc_text_fill;
+      default:
+        return CupertinoIcons.doc;
+    }
   }
 
   Widget _buildInputArea() {
@@ -418,13 +660,13 @@ class _ChatPageState extends State<ChatPage> {
       ),
       child: Row(
         children: [
-          // Water Quality Button
+          // File Upload Button
           CupertinoButton(
             padding: const EdgeInsets.all(8),
             minSize: 40,
-            onPressed: _showWaterQualityInput,
+            onPressed: _pickFiles,
             child: Icon(
-              CupertinoIcons.drop_fill,
+              CupertinoIcons.paperclip,
               color: AppColors.darkVanilla,
               size: 24,
             ),
@@ -439,7 +681,7 @@ class _ChatPageState extends State<ChatPage> {
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => _sendMessage(),
               decoration: InputDecoration(
-                hintText: 'Ask about water quality...',
+                hintText: 'Ask about water quality or upload files...',
                 hintStyle: AppTextStyles.body.copyWith(
                   color: AppColors.mediumGray.withOpacity(0.5),
                 ),
@@ -503,151 +745,165 @@ class _ChatPageState extends State<ChatPage> {
   }
 }
 
-// Water Quality Input Dialog
-class _WaterQualityInputDialog extends StatefulWidget {
-  final Function(Map<String, dynamic>) onSubmit;
+// Report Generation Dialog
+class _ReportGenerationDialog extends StatefulWidget {
+  final ChatProvider chatProvider;
 
-  const _WaterQualityInputDialog({required this.onSubmit});
+  const _ReportGenerationDialog({required this.chatProvider});
 
   @override
-  State<_WaterQualityInputDialog> createState() =>
-      _WaterQualityInputDialogState();
+  State<_ReportGenerationDialog> createState() =>
+      _ReportGenerationDialogState();
 }
 
-class _WaterQualityInputDialogState extends State<_WaterQualityInputDialog> {
-  final _pHController = TextEditingController(text: '7.0');
-  final _turbidityController = TextEditingController(text: '2.0');
-  final _doController = TextEditingController(text: '8.0');
-  final _tempController = TextEditingController(text: '25.0');
-  final _conductivityController = TextEditingController(text: '500');
-  final _locationController = TextEditingController(text: 'Water Sample');
+class _ReportGenerationDialogState extends State<_ReportGenerationDialog> {
+  final _reportTitleController = TextEditingController(
+    text: 'Water Quality Analysis Report',
+  );
+  String _selectedFormat = 'PDF';
+  bool _isGenerating = false;
 
   @override
   void dispose() {
-    _pHController.dispose();
-    _turbidityController.dispose();
-    _doController.dispose();
-    _tempController.dispose();
-    _conductivityController.dispose();
-    _locationController.dispose();
+    _reportTitleController.dispose();
     super.dispose();
+  }
+
+  Future<void> _generateReport() async {
+    setState(() {
+      _isGenerating = true;
+    });
+
+    try {
+      // Generate report with ML analysis
+      await widget.chatProvider.generateReport(
+        title: _reportTitleController.text,
+        format: _selectedFormat,
+      );
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Report generated successfully as $_selectedFormat',
+            ),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error generating report: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isGenerating = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Water Quality Parameters',
-              style: AppTextStyles.heading3.copyWith(
-                color: AppColors.charcoal,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildInputField('pH Level', _pHController, '0-14'),
-            _buildInputField('Turbidity (NTU)', _turbidityController, '0-10'),
-            _buildInputField('Dissolved Oxygen', _doController, '0-15'),
-            _buildInputField('Temperature (°C)', _tempController, '-10-50'),
-            _buildInputField('Conductivity (µS/cm)', _conductivityController, '0-2000'),
-            _buildInputField('Location', _locationController, 'Text'),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () {
-                  widget.onSubmit({
-                    'pH': double.parse(_pHController.text),
-                    'turbidity': double.parse(_turbidityController.text),
-                    'dissolved_oxygen': double.parse(_doController.text),
-                    'temperature': double.parse(_tempController.text),
-                    'conductivity': double.parse(_conductivityController.text),
-                    'location': _locationController.text,
-                  });
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.darkVanilla,
-                ),
-                child: Text(
-                  'Analyze Water Quality',
-                  style: AppTextStyles.button.copyWith(
-                    color: AppColors.white,
-                  ),
-                ),
-              ),
-            ),
-          ],
+    return AlertDialog(
+      backgroundColor: AppColors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(
+        'Generate Report',
+        style: AppTextStyles.heading3.copyWith(
+          color: AppColors.charcoal,
         ),
       ),
-    );
-  }
-
-  Widget _buildInputField(String label, TextEditingController controller, String hint) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label,
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.mediumGray,
+            'Report Title:',
+            style: AppTextStyles.buttonSmall.copyWith(
+              color: AppColors.charcoal,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           TextField(
-            controller: controller,
-            keyboardType: TextInputType.numberWithOptions(decimal: true),
+            controller: _reportTitleController,
             decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.mediumGray.withOpacity(0.5),
-              ),
+              hintText: 'Enter report title',
               filled: true,
               fillColor: AppColors.darkCream.withOpacity(0.1),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(
-                  color: AppColors.darkCream.withOpacity(0.2),
-                ),
-              ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
                   color: AppColors.darkVanilla,
                   width: 2,
                 ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 10,
               ),
             ),
             style: AppTextStyles.body.copyWith(
               color: AppColors.charcoal,
             ),
           ),
+          const SizedBox(height: 16),
+          Text(
+            'Format:',
+            style: AppTextStyles.buttonSmall.copyWith(
+              color: AppColors.charcoal,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: ['PDF', 'Excel', 'CSV'].map((format) {
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: ChoiceChip(
+                    label: Text(format),
+                    selected: _selectedFormat == format,
+                    onSelected: (selected) {
+                      setState(() {
+                        _selectedFormat = format;
+                      });
+                    },
+                    selectedColor: AppColors.darkVanilla,
+                    labelStyle: AppTextStyles.buttonSmall.copyWith(
+                      color: _selectedFormat == format
+                          ? AppColors.white
+                          : AppColors.charcoal,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
         ],
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancel',
+            style: AppTextStyles.button.copyWith(
+              color: AppColors.mediumGray,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: _isGenerating ? null : _generateReport,
+          child: Text(
+            _isGenerating ? 'Generating...' : 'Generate',
+            style: AppTextStyles.button.copyWith(
+              color: AppColors.darkVanilla,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
