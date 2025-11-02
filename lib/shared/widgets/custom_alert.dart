@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../../../core/constants/color_constants.dart';
 import '../../../../core/theme/text_styles.dart';
+import '../../../ml/repositories/ml_repository.dart';
 import 'cupertino_button.dart';
 
 class CustomAlert {
@@ -35,7 +37,8 @@ class CustomAlert {
               },
               child: Text(
                 cancelText,
-                style: AppTextStyles.button.copyWith(color: AppColors.mediumGray),
+                style:
+                    AppTextStyles.button.copyWith(color: AppColors.mediumGray),
               ),
             ),
           TextButton(
@@ -45,7 +48,8 @@ class CustomAlert {
             },
             child: Text(
               confirmText,
-              style: AppTextStyles.button.copyWith(color: AppColors.darkVanilla),
+              style: AppTextStyles.button
+                  .copyWith(color: AppColors.darkVanilla),
             ),
           ),
         ],
@@ -53,7 +57,7 @@ class CustomAlert {
     );
   }
 
-  // Show Create Alert Form Modal
+  /// Show Create Alert Form Modal
   static void showCreateAlertForm(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -64,7 +68,7 @@ class CustomAlert {
   }
 }
 
-// Create Alert Form Modal
+/// Create Alert Form Modal
 class CreateAlertForm extends StatefulWidget {
   const CreateAlertForm({Key? key}) : super(key: key);
 
@@ -79,6 +83,8 @@ class _CreateAlertFormState extends State<CreateAlertForm> {
   final _locationController = TextEditingController();
   final _rangeController = TextEditingController();
 
+  late MLRepository _mlRepository;
+
   String _selectedRiskLevel = 'Low';
   final List<String> _riskLevels = ['Low', 'Medium', 'High', 'Critical'];
 
@@ -90,6 +96,15 @@ class _CreateAlertFormState extends State<CreateAlertForm> {
     'Supply Issue',
     'Health Advisory',
   ];
+
+  bool _isSubmitting = false;
+  Map<String, dynamic>? _mlClassification;
+
+  @override
+  void initState() {
+    super.initState();
+    _mlRepository = MLRepository();
+  }
 
   @override
   void dispose() {
@@ -115,26 +130,62 @@ class _CreateAlertFormState extends State<CreateAlertForm> {
     }
   }
 
-  void _submitAlert() {
+  /// Submit alert with ML classification
+  Future<void> _submitAlert() async {
     if (_formKey.currentState!.validate()) {
-      final alertData = {
-        'title': _titleController.text,
-        'description': _descriptionController.text,
-        'type': _selectedAlertType,
-        'riskLevel': _selectedRiskLevel,
-        'location': _locationController.text,
-        'range': double.parse(_rangeController.text),
-        'timestamp': DateTime.now().toIso8601String(),
-      };
+      setState(() {
+        _isSubmitting = true;
+      });
 
-      print('Alert Data: $alertData');
+      try {
+        // Classify alert using ML
+        _mlClassification = await _mlRepository
+            .classifyAlertSentiment(_titleController.text);
 
-      Navigator.of(context).pop();
-      CustomAlert.show(
-        context,
-        title: 'Success',
-        message: 'Alert created successfully and published to the public!',
-      );
+        final alertData = {
+          'title': _titleController.text,
+          'description': _descriptionController.text,
+          'type': _selectedAlertType,
+          'riskLevel': _selectedRiskLevel,
+          'location': _locationController.text,
+          'range': double.parse(_rangeController.text),
+          'timestamp': DateTime.now().toIso8601String(),
+          'mlClassification': _mlClassification,
+        };
+
+        print('Alert Data: $alertData');
+
+        Navigator.of(context).pop();
+        CustomAlert.show(
+          context,
+          title: 'Success',
+          message: 'Alert created successfully and published to the public!',
+          onConfirm: () {
+            // Clear form for next alert
+            _titleController.clear();
+            _descriptionController.clear();
+            _locationController.clear();
+            _rangeController.clear();
+            setState(() {
+              _selectedRiskLevel = 'Low';
+              _selectedAlertType = 'Water Quality';
+              _mlClassification = null;
+            });
+          },
+        );
+      } catch (e) {
+        print('Error submitting alert: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: Failed to create alert. $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      } finally {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
   }
 
@@ -155,7 +206,8 @@ class _CreateAlertFormState extends State<CreateAlertForm> {
               return ListTile(
                 title: Text(
                   type,
-                  style: AppTextStyles.body.copyWith(color: AppColors.charcoal),
+                  style:
+                      AppTextStyles.body.copyWith(color: AppColors.charcoal),
                 ),
                 onTap: () {
                   setState(() {
@@ -237,6 +289,9 @@ class _CreateAlertFormState extends State<CreateAlertForm> {
                         if (value == null || value.isEmpty) {
                           return 'Title is required';
                         }
+                        if (value.length < 5) {
+                          return 'Title must be at least 5 characters';
+                        }
                         return null;
                       },
                     ),
@@ -249,6 +304,9 @@ class _CreateAlertFormState extends State<CreateAlertForm> {
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Description is required';
+                        }
+                        if (value.length < 10) {
+                          return 'Description must be at least 10 characters';
                         }
                         return null;
                       },
@@ -291,19 +349,42 @@ class _CreateAlertFormState extends State<CreateAlertForm> {
                         if (double.tryParse(value) == null) {
                           return 'Enter a valid number';
                         }
+                        if (double.parse(value) <= 0) {
+                          return 'Range must be greater than 0';
+                        }
                         return null;
                       },
                     ),
+                    // ML Classification info
+                    if (_mlClassification != null) ...[
+                      const SizedBox(height: 16),
+                      _buildClassificationInfo(),
+                    ],
                     const SizedBox(height: 32),
                     // Submit button
                     SizedBox(
                       width: double.infinity,
                       height: 56,
-                      child: CupertinoButtonWidget(
-                        text: 'Publish Alert',
-                        onPressed: _submitAlert,
-                        backgroundColor: AppColors.darkVanilla,
-                      ),
+                      child: _isSubmitting
+                          ? Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.darkVanilla
+                                    .withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    AppColors.white,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : CupertinoButtonWidget(
+                              text: 'Publish Alert',
+                              onPressed: _submitAlert,
+                              backgroundColor: AppColors.darkVanilla,
+                            ),
                     ),
                   ],
                 ),
@@ -322,64 +403,67 @@ class _CreateAlertFormState extends State<CreateAlertForm> {
     );
   }
 
-Widget _buildTextField({
-  required TextEditingController controller,
-  required String label,
-  required String placeholder,
-  int maxLines = 1,
-  TextInputType? keyboardType,
-  String? Function(String?)? validator,
-}) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        label,
-        style: AppTextStyles.caption.copyWith(color: AppColors.mediumGray),
-      ),
-      const SizedBox(height: 8),
-      TextFormField(
-        controller: controller,
-        maxLines: maxLines,
-        keyboardType: keyboardType,
-        validator: validator,
-        decoration: InputDecoration(
-          hintText: placeholder,
-          filled: true,
-          fillColor: AppColors.darkCream.withOpacity(0.1),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: AppColors.darkCream.withOpacity(0.2),
-              width: 1,
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: AppColors.darkVanilla,
-              width: 2,
-            ),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.error, width: 2),
-          ),
-          hintStyle: AppTextStyles.body.copyWith(
-            color: AppColors.mediumGray.withOpacity(0.5),
-          ),
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String placeholder,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style:
+              AppTextStyles.caption.copyWith(color: AppColors.mediumGray),
         ),
-        style: AppTextStyles.body.copyWith(color: AppColors.charcoal),
-      ),
-    ],
-  );
-}
-
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          maxLines: maxLines,
+          keyboardType: keyboardType,
+          validator: validator,
+          decoration: InputDecoration(
+            hintText: placeholder,
+            filled: true,
+            fillColor: AppColors.darkCream.withOpacity(0.1),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: AppColors.darkCream.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: AppColors.darkVanilla,
+                width: 2,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.error, width: 2),
+            ),
+            hintStyle: AppTextStyles.body.copyWith(
+              color: AppColors.mediumGray.withOpacity(0.5),
+            ),
+          ),
+          style: AppTextStyles.body.copyWith(color: AppColors.charcoal),
+        ),
+      ],
+    );
+  }
 
   Widget _buildDropdown({
     required String value,
@@ -402,7 +486,9 @@ Widget _buildTextField({
           children: [
             Text(
               value,
-              style: AppTextStyles.body.copyWith(color: AppColors.charcoal),
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.charcoal,
+              ),
             ),
             Icon(
               Icons.expand_more,
@@ -465,6 +551,58 @@ Widget _buildTextField({
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildClassificationInfo() {
+    final sentiment = _mlClassification?['sentiment'] ?? 'unknown';
+    final confidence = (_mlClassification?['confidence'] as num?)?.toDouble() ?? 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.darkVanilla.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.darkVanilla.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                CupertinoIcons.checkmark_circle_fill,
+                color: AppColors.darkVanilla,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'ML Analysis Complete',
+                style: AppTextStyles.buttonSmall.copyWith(
+                  color: AppColors.darkVanilla,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Sentiment: ${sentiment.toUpperCase()}',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.charcoal,
+            ),
+          ),
+          Text(
+            'Confidence: ${(confidence * 100).toStringAsFixed(1)}%',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.mediumGray,
+            ),
+          ),
+        ],
       ),
     );
   }
