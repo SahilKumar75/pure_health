@@ -3,8 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:pure_health/features/home/presentation/pages/home_page.dart';
 import 'package:pure_health/features/profile/presentation/pages/profile_page.dart';
 import 'package:pure_health/features/history/history_report_page.dart';
-import 'package:pure_health/features/settings/settings_page.dart';
-import 'package:pure_health/features/home/presentation/pages/chat_page.dart';
+import 'package:pure_health/features/settings/presentation/pages/settings_page.dart';
+import 'package:pure_health/features/chat/presentation/pages/chat_page.dart';
 import 'package:flutter/cupertino.dart';
 
 CustomTransitionPage<T> cupertinoPage<T>({required Widget child}) => CustomTransitionPage<T>(

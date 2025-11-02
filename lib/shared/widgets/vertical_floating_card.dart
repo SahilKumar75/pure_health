@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/color_constants.dart';
+import '../../../../core/theme/text_styles.dart';
 
 /// A vertical floating card that acts as a chat interface, with collapse/expand and minimize features.
 class VerticalFloatingCard extends StatefulWidget {
@@ -47,7 +49,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
   }
 
   void _toggle() => setState(() => _collapsed = !_collapsed);
-  
+
   void _toggleMinimize() {
     setState(() {
       _isMinimized = !_isMinimized;
@@ -75,10 +77,6 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
   }
 
   Widget _buildChatContent() {
-    const userBubble = Color(0xFF2A2A2A);
-    const assistantBubble = Color(0xFF1A1A1A);
-    const borderColor = Color(0xFF525252);
-
     return Column(
       children: [
         // Header
@@ -89,12 +87,8 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
               children: [
                 Text(
                   'Chat',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white.withOpacity(0.95),
-                    letterSpacing: -0.3,
-                    fontFamily: 'SF Pro',
+                  style: AppTextStyles.heading3.copyWith(
+                    color: AppColors.charcoal,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -107,16 +101,16 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF667EEA).withOpacity(0.15),
+                      color: AppColors.darkVanilla.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: const Color(0xFF667EEA).withOpacity(0.3),
+                        color: AppColors.darkVanilla.withOpacity(0.3),
                         width: 1,
                       ),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       CupertinoIcons.arrow_up_right_square,
-                      color: Color(0xFF667EEA),
+                      color: AppColors.darkVanilla,
                       size: 18,
                     ),
                   ),
@@ -133,17 +127,17 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
+                      color: AppColors.darkCream.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: borderColor.withOpacity(0.3),
+                        color: AppColors.darkCream.withOpacity(0.2),
                         width: 1,
                       ),
                     ),
                     child: Icon(
                       CupertinoIcons.minus_rectangle,
                       size: 16,
-                      color: Colors.white.withOpacity(0.7),
+                      color: AppColors.mediumGray,
                     ),
                   ),
                 ),
@@ -156,17 +150,19 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
+                      color: AppColors.darkCream.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: borderColor.withOpacity(0.3),
+                        color: AppColors.darkCream.withOpacity(0.2),
                         width: 1,
                       ),
                     ),
                     child: Icon(
-                      _collapsed ? CupertinoIcons.chevron_left : CupertinoIcons.chevron_right,
+                      _collapsed
+                          ? CupertinoIcons.chevron_left
+                          : CupertinoIcons.chevron_right,
                       size: 16,
-                      color: Colors.white.withOpacity(0.7),
+                      color: AppColors.mediumGray,
                     ),
                   ),
                 ),
@@ -177,7 +173,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
         Container(
           height: 1,
           margin: const EdgeInsets.symmetric(vertical: 12),
-          color: borderColor.withOpacity(0.3),
+          color: AppColors.darkCream.withOpacity(0.2),
         ),
         // Chat messages
         Expanded(
@@ -200,13 +196,13 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFB8956A),
+                          color: AppColors.darkVanilla.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           CupertinoIcons.sparkles,
                           size: 18,
-                          color: Colors.white,
+                          color: AppColors.darkVanilla,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -218,7 +214,9 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: msg.isUser ? userBubble : assistantBubble,
+                          color: msg.isUser
+                              ? AppColors.darkCream.withOpacity(0.2)
+                              : AppColors.lightGray,
                           borderRadius: msg.isUser
                               ? const BorderRadius.only(
                                   topLeft: Radius.circular(18),
@@ -233,17 +231,14 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                                   bottomRight: Radius.circular(18),
                                 ),
                           border: Border.all(
-                            color: borderColor.withOpacity(0.2),
+                            color: AppColors.darkCream.withOpacity(0.15),
                             width: 1,
                           ),
                         ),
                         child: Text(
                           msg.text,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.95),
-                            fontSize: 15,
-                            height: 1.5,
-                            fontFamily: 'SF Pro',
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.charcoal,
                           ),
                         ),
                       ),
@@ -254,13 +249,13 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF667EEA),
+                          color: AppColors.darkVanilla.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           CupertinoIcons.person_fill,
                           size: 18,
-                          color: Colors.white,
+                          color: AppColors.darkVanilla,
                         ),
                       ),
                     ],
@@ -275,10 +270,10 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
           padding: const EdgeInsets.only(top: 8),
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF3E3E3E),
+              color: AppColors.darkCream.withOpacity(0.1),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: borderColor.withOpacity(0.5),
+                color: AppColors.darkCream.withOpacity(0.2),
                 width: 1,
               ),
             ),
@@ -293,7 +288,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                   },
                   child: Icon(
                     CupertinoIcons.paperclip,
-                    color: Colors.white.withOpacity(0.6),
+                    color: AppColors.mediumGray,
                     size: 22,
                   ),
                 ),
@@ -311,21 +306,16 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                     decoration: const BoxDecoration(
                       color: Colors.transparent,
                     ),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: Colors.white,
-                      height: 1.4,
-                      fontFamily: 'SF Pro',
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.charcoal,
                     ),
-                    placeholderStyle: TextStyle(
-                      fontSize: 15,
-                      color: Colors.white.withOpacity(0.4),
-                      fontFamily: 'SF Pro',
+                    placeholderStyle: AppTextStyles.body.copyWith(
+                      color: AppColors.mediumGray.withOpacity(0.5),
                     ),
                     maxLines: 6,
                     minLines: 1,
                     textInputAction: TextInputAction.newline,
-                    cursorColor: Colors.white,
+                    cursorColor: AppColors.darkVanilla,
                   ),
                 ),
                 Padding(
@@ -341,15 +331,15 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                       height: 32,
                       decoration: BoxDecoration(
                         color: _controller.text.trim().isEmpty
-                            ? Colors.white.withOpacity(0.1)
-                            : const Color(0xFF667EEA),
+                            ? AppColors.darkCream.withOpacity(0.1)
+                            : AppColors.darkVanilla,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Icon(
                         CupertinoIcons.arrow_up,
                         color: _controller.text.trim().isEmpty
-                            ? Colors.white.withOpacity(0.3)
-                            : Colors.white,
+                            ? AppColors.mediumGray.withOpacity(0.3)
+                            : AppColors.white,
                         size: 18,
                       ),
                     ),
@@ -364,24 +354,21 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
   }
 
   Widget _buildMinimizedBox() {
-    const bgColor = Color(0xFF343434);
-    const borderColor = Color(0xFF525252);
-    
     return GestureDetector(
       onTap: _toggleMinimize,
       child: Container(
         width: 80,
         height: 80,
         decoration: BoxDecoration(
-          color: bgColor,
+          color: AppColors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: borderColor.withOpacity(0.3),
+            color: AppColors.darkCream.withOpacity(0.2),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: AppColors.charcoal.withOpacity(0.1),
               blurRadius: 24,
               offset: const Offset(0, 4),
             ),
@@ -394,12 +381,12 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFF667EEA).withOpacity(0.2),
+                color: AppColors.darkVanilla.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 CupertinoIcons.chat_bubble_2_fill,
-                color: Color(0xFF667EEA),
+                color: AppColors.darkVanilla,
                 size: 22,
               ),
             ),
@@ -407,16 +394,13 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFFEF5350),
+                color: AppColors.error,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 '${_messages.length}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  fontFamily: 'SF Pro',
+                style: AppTextStyles.buttonSmall.copyWith(
+                  color: AppColors.white,
                 ),
               ),
             ),
@@ -428,9 +412,8 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
 
   @override
   Widget build(BuildContext context) {
-    const bgColor = Color(0xFF343434);
     final anchoredRight = widget.alignment == Alignment.centerRight;
-    
+
     return SafeArea(
       child: Align(
         alignment: anchoredRight ? Alignment.bottomRight : Alignment.bottomLeft,
@@ -445,7 +428,8 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
             transitionBuilder: (child, animation) {
               return ScaleTransition(
                 scale: animation,
-                alignment: anchoredRight ? Alignment.bottomRight : Alignment.bottomLeft,
+                alignment:
+                    anchoredRight ? Alignment.bottomRight : Alignment.bottomLeft,
                 child: FadeTransition(
                   opacity: animation,
                   child: child,
@@ -456,9 +440,12 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                 ? _buildMinimizedBox()
                 : LayoutBuilder(
                     builder: (context, constraints) {
-                      final availableHeight = MediaQuery.of(context).size.height * 0.8;
+                      final availableHeight =
+                          MediaQuery.of(context).size.height * 0.8;
                       return SizedBox(
-                        width: _collapsed ? widget.collapsedVisibleWidth : widget.width,
+                        width: _collapsed
+                            ? widget.collapsedVisibleWidth
+                            : widget.width,
                         height: availableHeight,
                         child: Stack(
                           clipBehavior: Clip.none,
@@ -468,17 +455,23 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                               duration: widget.duration,
                               curve: Curves.easeInOut,
                               right: anchoredRight
-                                  ? (_collapsed ? -(widget.width - widget.collapsedVisibleWidth) : 0)
+                                  ? (_collapsed
+                                      ? -(widget.width -
+                                          widget.collapsedVisibleWidth)
+                                      : 0)
                                   : null,
                               left: anchoredRight
                                   ? null
-                                  : (_collapsed ? -(widget.width - widget.collapsedVisibleWidth) : 0),
+                                  : (_collapsed
+                                      ? -(widget.width -
+                                          widget.collapsedVisibleWidth)
+                                      : 0),
                               top: 0,
                               bottom: 0,
                               width: widget.width,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: bgColor,
+                                  color: AppColors.white,
                                   borderRadius: anchoredRight
                                       ? const BorderRadius.only(
                                           topLeft: Radius.circular(24),
@@ -489,12 +482,12 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                                           bottomRight: Radius.circular(24),
                                         ),
                                   border: Border.all(
-                                    color: const Color(0xFF525252).withOpacity(0.3),
+                                    color: AppColors.darkCream.withOpacity(0.2),
                                     width: 1,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.3),
+                                      color: AppColors.charcoal.withOpacity(0.1),
                                       blurRadius: 24,
                                       offset: const Offset(0, 4),
                                     ),
@@ -516,7 +509,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                                   onTap: _toggle,
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: bgColor,
+                                      color: AppColors.white,
                                       borderRadius: anchoredRight
                                           ? const BorderRadius.only(
                                               topLeft: Radius.circular(24),
@@ -527,12 +520,14 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                                               bottomRight: Radius.circular(24),
                                             ),
                                       border: Border.all(
-                                        color: const Color(0xFF525252).withOpacity(0.3),
+                                        color:
+                                            AppColors.darkCream.withOpacity(0.2),
                                         width: 1,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.3),
+                                          color: AppColors.charcoal
+                                              .withOpacity(0.1),
                                           blurRadius: 24,
                                           offset: const Offset(0, 4),
                                         ),
@@ -542,10 +537,13 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                                       child: Container(
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.08),
-                                          borderRadius: BorderRadius.circular(12),
+                                          color: AppColors.darkCream
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                           border: Border.all(
-                                            color: const Color(0xFF525252).withOpacity(0.3),
+                                            color: AppColors.darkCream
+                                                .withOpacity(0.2),
                                             width: 1,
                                           ),
                                         ),
@@ -554,7 +552,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                                               ? CupertinoIcons.chevron_left
                                               : CupertinoIcons.chevron_right,
                                           size: 20,
-                                          color: Colors.white.withOpacity(0.7),
+                                          color: AppColors.mediumGray,
                                         ),
                                       ),
                                     ),

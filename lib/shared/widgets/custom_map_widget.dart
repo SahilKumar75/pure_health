@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../../../core/constants/color_constants.dart';
 
 class CustomMapWidget extends StatefulWidget {
   final double zoom;
@@ -39,7 +39,8 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    if (permission == LocationPermission.deniedForever || permission == LocationPermission.denied) {
+    if (permission == LocationPermission.deniedForever ||
+        permission == LocationPermission.denied) {
       setState(() {
         _currentCenter = LatLng(28.6139, 77.2090); // fallback: New Delhi
         _loading = false;
@@ -56,9 +57,15 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
   @override
   Widget build(BuildContext context) {
     if (_loading || _currentCenter == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            AppColors.darkVanilla,
+          ),
+        ),
+      );
     }
-    
+
     // Build the current location marker
     final currentLocationMarker = Marker(
       point: _currentCenter!,
@@ -67,22 +74,22 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
       child: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white,
+          color: AppColors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.blueAccent.withOpacity(0.15),
+              color: AppColors.darkVanilla.withOpacity(0.2),
               blurRadius: 8,
               spreadRadius: 2,
             ),
           ],
           border: Border.all(
-            color: Colors.blueAccent,
+            color: AppColors.darkVanilla,
             width: 2,
           ),
         ),
-        child: const Icon(
-          CupertinoIcons.location_solid,
-          color: Colors.blueAccent,
+        child: Icon(
+          Icons.location_on,
+          color: AppColors.darkVanilla,
           size: 28,
         ),
       ),
@@ -97,29 +104,32 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
+            color: AppColors.charcoal.withOpacity(0.08),
             blurRadius: 12,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: FlutterMap(
-        mapController: _mapController,
-        options: MapOptions(
-          initialCenter: _currentCenter!,
-          initialZoom: widget.zoom,
-        ),
-        children: [
-          TileLayer(
-            urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            subdomains: const ['a', 'b', 'c'],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: _currentCenter!,
+            initialZoom: widget.zoom,
           ),
-          MarkerLayer(markers: allMarkers),
-        ],
+          children: [
+            TileLayer(
+              urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              subdomains: const ['a', 'b', 'c'],
+            ),
+            MarkerLayer(markers: allMarkers),
+          ],
+        ),
       ),
     );
   }

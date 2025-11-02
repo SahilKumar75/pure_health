@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:pure_health/widgets/custom_map_widget.dart';
-import 'package:pure_health/widgets/custom_sidebar.dart';
+import 'package:pure_health/core/constants/color_constants.dart';
+import 'package:pure_health/core/theme/text_styles.dart';
+import 'package:pure_health/shared/widgets/custom_map_widget.dart';
+import 'package:pure_health/shared/widgets/custom_sidebar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/cupertino.dart';
@@ -39,7 +41,7 @@ class HistoryReportPage extends StatefulWidget {
 class _HistoryReportPageState extends State<HistoryReportPage> {
   int _selectedIndex = 2;
   bool _isSidebarExpanded = false;
-  double _bottomCardHeight = 0.50; // Store as fraction of screen height
+  double _bottomCardHeight = 0.50;
   bool _isDragging = false;
 
   final Report _latestSimulation = Report(
@@ -92,9 +94,7 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
   void _handleVerticalDrag(DragUpdateDetails details, double screenHeight) {
     setState(() {
       _isDragging = true;
-      // Calculate new height as fraction (subtract because drag down increases Y)
       double newHeightFraction = _bottomCardHeight - (details.delta.dy / screenHeight);
-      // Clamp between 0.2 (20%) and 0.9 (90%)
       _bottomCardHeight = newHeightFraction.clamp(0.2, 0.9);
     });
   }
@@ -110,7 +110,7 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
         DateTime tempDate = startDate;
         return Container(
           height: 300,
-          color: const Color(0xFF2A2A2A),
+          color: AppColors.white,
           child: Column(
             children: [
               SizedBox(
@@ -144,7 +144,7 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
         DateTime tempDate = endDate;
         return Container(
           height: 300,
-          color: const Color(0xFF2A2A2A),
+          color: AppColors.white,
           child: Column(
             children: [
               SizedBox(
@@ -192,13 +192,13 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Safe':
-        return const Color(0xFF4CAF50);
+        return AppColors.success;
       case 'Warning':
-        return const Color(0xFFFFA726);
+        return AppColors.warning;
       case 'Critical':
-        return const Color(0xFFEF5350);
+        return AppColors.error;
       default:
-        return const Color(0xFF9E9E9E);
+        return AppColors.mediumGray;
     }
   }
 
@@ -225,7 +225,7 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
         _filteredReports.where((r) => r.requiresAction).length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF343434),
+      backgroundColor: AppColors.lightCream,
       body: NotificationListener<SidebarExpandNotification>(
         onNotification: (notification) {
           setState(() {
@@ -248,12 +248,15 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                   setState(() {
                     _selectedIndex = index;
                   });
-                  if (index == 0) {
-                    context.go('/');
-                  } else if (index == 1) {
-                    context.go('/profile');
-                  } else if (index == 2) {
-                    context.go('/history');
+                  if (context.mounted) {
+                    switch (index) {
+                      case 0:
+                        context.go('/');
+                        break;
+                      case 2:
+                        context.go('/history');
+                        break;
+                    }
                   }
                 },
               ),
@@ -269,7 +272,8 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
               child: MouseRegion(
                 cursor: SystemMouseCursors.resizeUpDown,
                 child: GestureDetector(
-                  onVerticalDragUpdate: (details) => _handleVerticalDrag(details, screenHeight),
+                  onVerticalDragUpdate: (details) =>
+                      _handleVerticalDrag(details, screenHeight),
                   onVerticalDragEnd: (details) {
                     setState(() {
                       _isDragging = false;
@@ -277,12 +281,12 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                   },
                   child: Container(
                     decoration: BoxDecoration(
-                      color: _isDragging 
-                          ? Colors.white.withOpacity(0.3)
-                          : Colors.white.withOpacity(0.1),
+                      color: _isDragging
+                          ? AppColors.darkCream.withOpacity(0.3)
+                          : AppColors.darkCream.withOpacity(0.1),
                       border: Border(
                         top: BorderSide(
-                          color: Colors.white.withOpacity(0.2),
+                          color: AppColors.darkCream.withOpacity(0.2),
                           width: 1,
                         ),
                       ),
@@ -292,7 +296,7 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.4),
+                          color: AppColors.darkCream.withOpacity(0.4),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -310,9 +314,16 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
               bottom: 0,
               height: bottomCardHeight,
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFF343434),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
                   borderRadius: BorderRadius.zero,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.charcoal.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -323,11 +334,8 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                       children: [
                         Text(
                           'Last updated: ${DateFormat('MMM d, y • HH:mm').format(_latestSimulation.date)}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.white.withOpacity(0.7),
-                            fontWeight: FontWeight.w500,
-                            fontFamily: 'SF Pro',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.mediumGray,
                           ),
                         ),
                         if (actionRequiredCount > 0)
@@ -337,29 +345,26 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFEF5350).withOpacity(0.15),
+                              color: AppColors.error.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: const Color(0xFFEF5350).withOpacity(0.3),
+                                color: AppColors.error.withOpacity(0.3),
                                 width: 1,
                               ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
+                                Icon(
                                   CupertinoIcons.exclamationmark_circle,
                                   size: 14,
-                                  color: Color(0xFFEF5350),
+                                  color: AppColors.error,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
                                   '$actionRequiredCount Action Required',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFFEF5350),
-                                    fontFamily: 'SF Pro',
+                                  style: AppTextStyles.buttonSmall.copyWith(
+                                    color: AppColors.error,
                                   ),
                                 ),
                               ],
@@ -380,7 +385,7 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                             padding: const EdgeInsets.symmetric(horizontal: 12.0),
                             child: Container(
                               width: 1,
-                              color: Colors.white.withOpacity(0.15),
+                              color: AppColors.darkCream.withOpacity(0.2),
                             ),
                           ),
                           Expanded(
@@ -405,10 +410,10 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
   Widget _buildCurrentStatusPanel() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: AppColors.darkCream.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: AppColors.darkCream.withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -442,22 +447,16 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                   children: [
                     Text(
                       _latestSimulation.status.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                      style: AppTextStyles.heading4.copyWith(
                         color: _getStatusColor(_latestSimulation.status),
                         letterSpacing: 0.5,
-                        fontFamily: 'SF Pro',
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       _latestSimulation.location,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white.withOpacity(0.7),
-                        fontWeight: FontWeight.w500,
-                        fontFamily: 'SF Pro',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.mediumGray,
                       ),
                     ),
                   ],
@@ -469,10 +468,10 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: AppColors.darkCream.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.2),
+                    color: AppColors.darkCream.withOpacity(0.2),
                     width: 1,
                   ),
                 ),
@@ -480,21 +479,15 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                   children: [
                     Text(
                       '${_latestSimulation.latestResults?['overallScore'] ?? 'N/A'}',
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontFamily: 'SF Pro',
+                      style: AppTextStyles.heading1.copyWith(
+                        color: AppColors.charcoal,
                       ),
                     ),
                     Text(
                       'SCORE',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.white.withOpacity(0.6),
-                        fontWeight: FontWeight.w600,
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.mediumGray,
                         letterSpacing: 0.5,
-                        fontFamily: 'SF Pro',
                       ),
                     ),
                   ],
@@ -503,7 +496,10 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
             ],
           ),
           const SizedBox(height: 20),
-          Divider(height: 1, color: Colors.white.withOpacity(0.1)),
+          Divider(
+            height: 1,
+            color: AppColors.darkCream.withOpacity(0.2),
+          ),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -542,13 +538,10 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Historical Reports',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    fontFamily: 'SF Pro',
+                  style: AppTextStyles.heading4.copyWith(
+                    color: AppColors.charcoal,
                   ),
                 ),
                 if (_selectedDateRange != null)
@@ -556,10 +549,8 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       '${DateFormat.yMMMd().format(_selectedDateRange!.start)} - ${DateFormat.yMMMd().format(_selectedDateRange!.end)}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.white.withOpacity(0.6),
-                        fontFamily: 'SF Pro',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.mediumGray,
                       ),
                     ),
                   ),
@@ -573,7 +564,7 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                     child: CupertinoButton(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),
-                      color: Colors.white.withOpacity(0.08),
+                      color: AppColors.darkCream.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       minSize: 0,
                       onPressed: _clearFilter,
@@ -583,16 +574,13 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                           Icon(
                             CupertinoIcons.xmark_circle,
                             size: 14,
-                            color: Colors.white.withOpacity(0.7),
+                            color: AppColors.mediumGray,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             'Clear',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white.withOpacity(0.7),
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'SF Pro',
+                            style: AppTextStyles.buttonSmall.copyWith(
+                              color: AppColors.mediumGray,
                             ),
                           ),
                         ],
@@ -602,26 +590,23 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                 CupertinoButton(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  color: Colors.white.withOpacity(0.15),
+                  color: AppColors.darkCream.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
                   minSize: 0,
                   onPressed: _selectDateRangeCupertino,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Icon(
                         CupertinoIcons.calendar,
                         size: 14,
-                        color: Colors.white,
+                        color: AppColors.charcoal,
                       ),
-                      SizedBox(width: 6),
+                      const SizedBox(width: 6),
                       Text(
                         'Date Range',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'SF Pro',
+                        style: AppTextStyles.buttonSmall.copyWith(
+                          color: AppColors.charcoal,
                         ),
                       ),
                     ],
@@ -641,16 +626,13 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                       Icon(
                         CupertinoIcons.doc_text_search,
                         size: 48,
-                        color: Colors.white.withOpacity(0.3),
+                        color: AppColors.darkCream.withOpacity(0.3),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         'No reports found for selected period',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.white.withOpacity(0.6),
-                          fontWeight: FontWeight.w500,
-                          fontFamily: 'SF Pro',
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.mediumGray,
                         ),
                       ),
                     ],
@@ -664,10 +646,10 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
+                          color: AppColors.darkCream.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.1),
+                            color: AppColors.darkCream.withOpacity(0.2),
                             width: 1,
                           ),
                         ),
@@ -676,7 +658,7 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12),
                             onTap: () {
-                              context.go('/reports/${report.id}');
+                              // Navigate to report details
                             },
                             child: Padding(
                               padding: const EdgeInsets.all(12),
@@ -715,51 +697,11 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                report.title,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 13,
-                                                  color: Colors.white,
-                                                  fontFamily: 'SF Pro',
-                                                ),
-                                              ),
-                                            ),
-                                            if (report.requiresAction)
-                                              Container(
-                                                margin: const EdgeInsets.only(
-                                                    left: 8),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 6,
-                                                  vertical: 3,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFFEF5350)
-                                                      .withOpacity(0.15),
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                  border: Border.all(
-                                                    color: const Color(0xFFEF5350)
-                                                        .withOpacity(0.3),
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                child: const Text(
-                                                  'ACTION',
-                                                  style: TextStyle(
-                                                    fontSize: 9,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Color(0xFFEF5350),
-                                                    letterSpacing: 0.5,
-                                                    fontFamily: 'SF Pro',
-                                                  ),
-                                                ),
-                                              ),
-                                          ],
+                                        Text(
+                                          report.title,
+                                          style: AppTextStyles.button.copyWith(
+                                            color: AppColors.charcoal,
+                                          ),
                                         ),
                                         const SizedBox(height: 6),
                                         Row(
@@ -767,37 +709,29 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                                             Icon(
                                               CupertinoIcons.location_solid,
                                               size: 11,
-                                              color:
-                                                  Colors.white.withOpacity(0.6),
+                                              color: AppColors.mediumGray,
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
                                               report.location,
-                                              style: TextStyle(
-                                                color: Colors.white
-                                                    .withOpacity(0.6),
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w500,
-                                                fontFamily: 'SF Pro',
+                                              style: AppTextStyles.bodySmall
+                                                  .copyWith(
+                                                color: AppColors.mediumGray,
                                               ),
                                             ),
                                             const SizedBox(width: 10),
                                             Icon(
                                               CupertinoIcons.time,
                                               size: 11,
-                                              color:
-                                                  Colors.white.withOpacity(0.6),
+                                              color: AppColors.mediumGray,
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
                                               DateFormat('MMM d, y')
                                                   .format(report.date),
-                                              style: TextStyle(
-                                                color: Colors.white
-                                                    .withOpacity(0.6),
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w500,
-                                                fontFamily: 'SF Pro',
+                                              style: AppTextStyles.bodySmall
+                                                  .copyWith(
+                                                color: AppColors.mediumGray,
                                               ),
                                             ),
                                           ],
@@ -822,12 +756,9 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                                     ),
                                     child: Text(
                                       report.status.toUpperCase(),
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
+                                      style: AppTextStyles.buttonSmall.copyWith(
                                         color: _getStatusColor(report.status),
                                         letterSpacing: 0.3,
-                                        fontFamily: 'SF Pro',
                                       ),
                                     ),
                                   ),
@@ -835,7 +766,7 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
                                   Icon(
                                     CupertinoIcons.chevron_right,
                                     size: 16,
-                                    color: Colors.white.withOpacity(0.5),
+                                    color: AppColors.mediumGray,
                                   ),
                                 ],
                               ),
@@ -862,45 +793,37 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.08),
+            color: AppColors.darkCream.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: Colors.white.withOpacity(0.15),
+              color: AppColors.darkCream.withOpacity(0.2),
               width: 1,
             ),
           ),
           child: Icon(
             icon,
             size: 22,
-            color: Colors.white.withOpacity(0.9),
+            color: AppColors.darkVanilla,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            fontFamily: 'SF Pro',
+          style: AppTextStyles.heading4.copyWith(
+            color: AppColors.charcoal,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.white.withOpacity(0.9),
-            fontWeight: FontWeight.w600,
-            fontFamily: 'SF Pro',
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.charcoal,
           ),
         ),
         Text(
           subtitle,
-          style: TextStyle(
-            fontSize: 9,
-            color: Colors.white.withOpacity(0.6),
-            fontFamily: 'SF Pro',
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.mediumGray,
           ),
         ),
       ],

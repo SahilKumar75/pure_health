@@ -1,11 +1,14 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:pure_health/widgets/custom_sidebar.dart';
-import 'package:pure_health/widgets/custom_map_widget.dart';
-import 'package:pure_health/widgets/vertical_floating_card.dart';
-import 'package:pure_health/widgets/custom_alert.dart';
+import 'package:flutter/material.dart';
+import 'package:pure_health/core/constants/color_constants.dart';
+import 'package:pure_health/core/theme/text_styles.dart';
+import 'package:pure_health/shared/widgets/custom_sidebar.dart';
+import 'package:pure_health/shared/widgets/custom_map_widget.dart';
+import 'package:pure_health/shared/widgets/vertical_floating_card.dart';
+import 'package:pure_health/shared/widgets/custom_alert.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -49,10 +52,10 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     // Calculate sidebar width dynamically
     final sidebarWidth = _isSidebarExpanded ? 216.0 : 88.0;
-    
-    return CupertinoPageScaffold(
-      backgroundColor: CupertinoColors.systemBackground,
-      child: NotificationListener<SidebarExpandNotification>(
+
+    return Scaffold(
+      backgroundColor: AppColors.lightCream,
+      body: NotificationListener<SidebarExpandNotification>(
         onNotification: (notification) {
           setState(() {
             _isSidebarExpanded = notification.isExpanded;
@@ -88,17 +91,18 @@ class _HomePageState extends State<HomePage> {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF343434).withOpacity(0.95),
+                  color: AppColors.white.withOpacity(0.95),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: const Color(0xFF525252).withOpacity(0.3),
+                    color: AppColors.darkCream.withOpacity(0.3),
                     width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
+                      color: AppColors.charcoal.withOpacity(0.1),
                       blurRadius: 20,
                       offset: const Offset(0, 6),
                     ),
@@ -113,7 +117,7 @@ class _HomePageState extends State<HomePage> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF667EEA).withOpacity(0.2),
+                            color: AppColors.darkVanilla.withOpacity(0.15),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -137,23 +141,17 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Text(
                           'PureHealth',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white.withOpacity(0.95),
+                          style: AppTextStyles.heading3.copyWith(
+                            color: AppColors.charcoal,
                             letterSpacing: -0.6,
-                            fontFamily: 'SF Pro',
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Water Quality Monitor',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white.withOpacity(0.65),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.mediumGray,
                             letterSpacing: 0.2,
-                            fontFamily: 'SF Pro',
                           ),
                         ),
                       ],
@@ -162,7 +160,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            // iOS-style vertical floating card on the right
+            // Chat floating card on the right
             const VerticalFloatingCard(
               width: 400,
               initiallyCollapsed: false,
@@ -183,15 +181,15 @@ class _HomePageState extends State<HomePage> {
                     height: 56,
                     width: _isBottomBarExpanded ? 320 : 160,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF343434),
+                      color: AppColors.white.withOpacity(0.95),
                       borderRadius: BorderRadius.circular(32),
                       border: Border.all(
-                        color: const Color(0xFF525252).withOpacity(0.3),
+                        color: AppColors.darkCream.withOpacity(0.3),
                         width: 1,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
+                          color: AppColors.charcoal.withOpacity(0.1),
                           blurRadius: 24,
                           offset: const Offset(0, 8),
                         ),
@@ -234,9 +232,9 @@ class _HomePageState extends State<HomePage> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     CupertinoIcons.add_circled_solid,
-                                    color: Color(0xFF667EEA),
+                                    color: AppColors.darkVanilla,
                                     size: 24,
                                   ),
                                   if (_isBottomBarExpanded) ...[
@@ -244,11 +242,8 @@ class _HomePageState extends State<HomePage> {
                                     Flexible(
                                       child: Text(
                                         'Create Alert',
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.95),
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          fontFamily: 'SF Pro',
+                                        style: AppTextStyles.button.copyWith(
+                                          color: AppColors.charcoal,
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -281,7 +276,7 @@ class _HomePageState extends State<HomePage> {
       onPressed: onPressed,
       child: Icon(
         icon,
-        color: Colors.white.withOpacity(0.9),
+        color: AppColors.charcoal,
         size: 24,
       ),
     );

@@ -1,6 +1,6 @@
 
 import 'package:flutter/material.dart';
-import 'package:pure_health/widgets/custom_sidebar.dart';
+import 'package:pure_health/shared/widgets/custom_sidebar.dart';
 import 'package:flutter/cupertino.dart';
 
 class ProfilePage extends StatefulWidget {

@@ -1,7 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:pure_health/widgets/custom_sidebar.dart';
-import 'package:pure_health/widgets/custom_map_widget.dart';
+import 'package:pure_health/core/constants/color_constants.dart';
+import 'package:pure_health/core/theme/text_styles.dart';
+import 'package:pure_health/shared/widgets/custom_sidebar.dart';
+import 'package:pure_health/shared/widgets/custom_map_widget.dart';
+import 'package:pure_health/shared/widgets/vertical_floating_card.dart';
+import 'package:pure_health/shared/widgets/custom_alert.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:go_router/go_router.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({Key? key}) : super(key: key);
@@ -38,15 +44,9 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    const bgColor = Color(0xFF343434);
-    const userBubble = Color(0xFF2A2A2A);
-    const assistantBubble = Color(0xFF1A1A1A);
-    const inputBg = Color(0xFF3E3E3E);
-    const borderColor = Color(0xFF525252);
-
-    return CupertinoPageScaffold(
-      backgroundColor: bgColor,
-      child: NotificationListener<SidebarExpandNotification>(
+    return Scaffold(
+      backgroundColor: AppColors.lightCream,
+      body: NotificationListener<SidebarExpandNotification>(
         onNotification: (notification) {
           setState(() {
             _isSidebarExpanded = notification.isExpanded;
@@ -55,23 +55,27 @@ class _ChatPageState extends State<ChatPage> {
         },
         child: Stack(
           children: [
+            // Background map with overlay
             Positioned.fill(
               child: IgnorePointer(
                 child: Opacity(
-                  opacity: 0.35,
+                  opacity: 0.2,
                   child: CustomMapWidget(
                     sidebarWidth: 72.0,
                   ),
                 ),
               ),
             ),
+            // Cream color overlay
             Positioned.fill(
               child: Container(
-                color: bgColor.withOpacity(0.85),
+                color: AppColors.lightCream.withOpacity(0.90),
               ),
             ),
+            // Main layout
             Row(
               children: [
+                // Sidebar
                 CustomSidebar(
                   selectedIndex: _selectedIndex,
                   onItemSelected: (int index) {
@@ -80,9 +84,11 @@ class _ChatPageState extends State<ChatPage> {
                     });
                   },
                 ),
+                // Chat content
                 Expanded(
                   child: Column(
                     children: [
+                      // Messages area
                       Expanded(
                         child: Container(
                           color: Colors.transparent,
@@ -91,67 +97,83 @@ class _ChatPageState extends State<ChatPage> {
                             padding: const EdgeInsets.all(16),
                             itemCount: _messages.length,
                             itemBuilder: (context, index) {
-                              final msg = _messages[_messages.length - 1 - index];
+                              final msg =
+                                  _messages[_messages.length - 1 - index];
                               return Center(
                                 child: Container(
-                                  constraints: const BoxConstraints(maxWidth: 800),
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 800),
                                   padding: const EdgeInsets.only(bottom: 16),
                                   child: Row(
                                     mainAxisAlignment: msg.isUser
                                         ? MainAxisAlignment.end
                                         : MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       if (!msg.isUser) ...[
                                         Container(
                                           width: 32,
                                           height: 32,
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFFB8956A),
-                                            borderRadius: BorderRadius.circular(16),
+                                            color: AppColors.darkVanilla
+                                                .withOpacity(0.3),
+                                            borderRadius:
+                                                BorderRadius.circular(16),
                                           ),
-                                          child: const Icon(
+                                          child: Icon(
                                             CupertinoIcons.sparkles,
                                             size: 18,
-                                            color: Colors.white,
+                                            color: AppColors.darkVanilla,
                                           ),
                                         ),
                                         const SizedBox(width: 8),
                                       ],
                                       Flexible(
                                         child: Container(
-                                          constraints: const BoxConstraints(maxWidth: 500),
+                                          constraints: const BoxConstraints(
+                                              maxWidth: 500),
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 16,
                                             vertical: 12,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: msg.isUser ? userBubble : assistantBubble,
+                                            color: msg.isUser
+                                                ? AppColors.darkCream
+                                                    .withOpacity(0.2)
+                                                : AppColors.white,
                                             borderRadius: msg.isUser
                                                 ? const BorderRadius.only(
-                                                    topLeft: Radius.circular(18),
-                                                    topRight: Radius.circular(4),
-                                                    bottomLeft: Radius.circular(18),
-                                                    bottomRight: Radius.circular(18),
+                                                    topLeft:
+                                                        Radius.circular(18),
+                                                    topRight:
+                                                        Radius.circular(4),
+                                                    bottomLeft:
+                                                        Radius.circular(18),
+                                                    bottomRight:
+                                                        Radius.circular(18),
                                                   )
                                                 : const BorderRadius.only(
-                                                    topLeft: Radius.circular(4),
-                                                    topRight: Radius.circular(18),
-                                                    bottomLeft: Radius.circular(18),
-                                                    bottomRight: Radius.circular(18),
+                                                    topLeft:
+                                                        Radius.circular(4),
+                                                    topRight:
+                                                        Radius.circular(18),
+                                                    bottomLeft:
+                                                        Radius.circular(18),
+                                                    bottomRight:
+                                                        Radius.circular(18),
                                                   ),
                                             border: Border.all(
-                                              color: borderColor.withOpacity(0.2),
+                                              color: AppColors.darkCream
+                                                  .withOpacity(0.2),
                                               width: 1,
                                             ),
                                           ),
                                           child: Text(
                                             msg.text,
-                                            style: TextStyle(
-                                              color: Colors.white.withOpacity(0.95),
-                                              fontSize: 15,
-                                              height: 1.5,
-                                              fontFamily: 'SF Pro',
+                                            style: AppTextStyles.body
+                                                .copyWith(
+                                              color: AppColors.charcoal,
                                             ),
                                           ),
                                         ),
@@ -162,13 +184,15 @@ class _ChatPageState extends State<ChatPage> {
                                           width: 32,
                                           height: 32,
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF667EEA),
-                                            borderRadius: BorderRadius.circular(16),
+                                            color: AppColors.darkVanilla
+                                                .withOpacity(0.2),
+                                            borderRadius:
+                                                BorderRadius.circular(16),
                                           ),
-                                          child: const Icon(
+                                          child: Icon(
                                             CupertinoIcons.person_fill,
                                             size: 18,
-                                            color: Colors.white,
+                                            color: AppColors.darkVanilla,
                                           ),
                                         ),
                                       ],
@@ -180,13 +204,14 @@ class _ChatPageState extends State<ChatPage> {
                           ),
                         ),
                       ),
+                      // Input area
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.transparent,
                           border: Border(
                             top: BorderSide(
-                              color: borderColor.withOpacity(0.3),
+                              color: AppColors.darkCream.withOpacity(0.2),
                               width: 1,
                             ),
                           ),
@@ -196,10 +221,10 @@ class _ChatPageState extends State<ChatPage> {
                           child: Container(
                             constraints: const BoxConstraints(maxWidth: 800),
                             decoration: BoxDecoration(
-                              color: inputBg,
+                              color: AppColors.darkCream.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
-                                color: borderColor.withOpacity(0.5),
+                                color: AppColors.darkCream.withOpacity(0.2),
                                 width: 1,
                               ),
                             ),
@@ -214,7 +239,7 @@ class _ChatPageState extends State<ChatPage> {
                                   },
                                   child: Icon(
                                     CupertinoIcons.paperclip,
-                                    color: Colors.white.withOpacity(0.6),
+                                    color: AppColors.mediumGray,
                                     size: 22,
                                   ),
                                 ),
@@ -232,21 +257,18 @@ class _ChatPageState extends State<ChatPage> {
                                     decoration: const BoxDecoration(
                                       color: Colors.transparent,
                                     ),
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      color: Colors.white,
-                                      height: 1.4,
-                                      fontFamily: 'SF Pro',
+                                    style: AppTextStyles.body.copyWith(
+                                      color: AppColors.charcoal,
                                     ),
-                                    placeholderStyle: TextStyle(
-                                      fontSize: 15,
-                                      color: Colors.white.withOpacity(0.4),
-                                      fontFamily: 'SF Pro',
+                                    placeholderStyle:
+                                        AppTextStyles.body.copyWith(
+                                      color: AppColors.mediumGray
+                                          .withOpacity(0.5),
                                     ),
                                     maxLines: 6,
                                     minLines: 1,
                                     textInputAction: TextInputAction.newline,
-                                    cursorColor: Colors.white,
+                                    cursorColor: AppColors.darkVanilla,
                                   ),
                                 ),
                                 Padding(
@@ -262,15 +284,20 @@ class _ChatPageState extends State<ChatPage> {
                                       height: 32,
                                       decoration: BoxDecoration(
                                         color: _controller.text.trim().isEmpty
-                                            ? Colors.white.withOpacity(0.1)
-                                            : const Color(0xFF667EEA),
-                                        borderRadius: BorderRadius.circular(16),
+                                            ? AppColors.darkCream
+                                                .withOpacity(0.1)
+                                            : AppColors.darkVanilla,
+                                        borderRadius:
+                                            BorderRadius.circular(16),
                                       ),
                                       child: Icon(
                                         CupertinoIcons.arrow_up,
-                                        color: _controller.text.trim().isEmpty
-                                            ? Colors.white.withOpacity(0.3)
-                                            : Colors.white,
+                                        color: _controller.text
+                                                .trim()
+                                                .isEmpty
+                                            ? AppColors.mediumGray
+                                                .withOpacity(0.3)
+                                            : AppColors.white,
                                         size: 18,
                                       ),
                                     ),
