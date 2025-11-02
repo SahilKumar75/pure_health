@@ -2,19 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:pure_health/core/constants/color_constants.dart';
 import 'package:pure_health/core/theme/text_styles.dart';
-import 'package:pure_health/core/utils/responsive_utils.dart';
-import 'package:pure_health/core/utils/accessibility_utils.dart';
-import 'package:pure_health/core/theme/high_contrast_theme.dart';
 import 'package:pure_health/shared/widgets/custom_sidebar.dart';
 import 'package:pure_health/shared/widgets/water_quality_charts.dart';
 import 'package:pure_health/shared/widgets/skeleton_loader.dart';
 import 'package:pure_health/shared/widgets/empty_state_widget.dart';
 import 'package:pure_health/shared/widgets/toast_notification.dart';
-import 'package:pure_health/shared/widgets/responsive_grid.dart';
-import 'package:pure_health/shared/widgets/responsive_button.dart';
-import 'package:pure_health/shared/widgets/refresh_widgets.dart';
-import 'package:pure_health/shared/widgets/hover_animations.dart';
-import 'package:pure_health/shared/widgets/page_transitions.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);
@@ -23,7 +15,7 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
+class _DashboardPageState extends State<DashboardPage> {
   int _selectedIndex = 1;
   bool _isLoading = false;
   bool _hasError = false;
@@ -127,219 +119,129 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = context.isMobile;
-    
     return Scaffold(
       backgroundColor: AppColors.lightCream,
-      body: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
-    );
-  }
-
-  Widget _buildMobileLayout() {
-    return Scaffold(
-      backgroundColor: AppColors.lightCream,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        title: Text(
-          '📊 Dashboard',
-          style: AppTextStyles.heading4.copyWith(
-            color: AppColors.charcoal,
-            fontWeight: FontWeight.w700,
+      body: Row(
+        children: [
+          CustomSidebar(
+            selectedIndex: _selectedIndex,
+            onItemSelected: (index) {
+              setState(() => _selectedIndex = index);
+            },
           ),
-        ),
-        actions: [
-          ResponsiveIconButton(
-            icon: CupertinoIcons.refresh,
-            onPressed: _isLoading ? null : _refreshData,
-            color: AppColors.accentPink,
-            tooltip: 'Refresh',
+          Expanded(
+            child: _isLoading
+                ? _buildLoadingState()
+                : _hasError
+                    ? _buildErrorState()
+                    : sampleData.isEmpty
+                        ? _buildEmptyState()
+                        : _buildDashboardContent(),
           ),
-          const SizedBox(width: 8),
         ],
       ),
-      body: _isLoading
-          ? _buildLoadingState()
-          : _hasError
-              ? _buildErrorState()
-              : sampleData.isEmpty
-                  ? _buildEmptyState()
-                  : _buildDashboardContent(),
-    );
-  }
-
-  Widget _buildDesktopLayout() {
-    return Row(
-      children: [
-        CustomSidebar(
-          selectedIndex: _selectedIndex,
-          onItemSelected: (index) {
-            setState(() => _selectedIndex = index);
-          },
-        ),
-        Expanded(
-          child: _isLoading
-              ? _buildLoadingState()
-              : _hasError
-                  ? _buildErrorState()
-                  : sampleData.isEmpty
-                      ? _buildEmptyState()
-                      : _buildDashboardContent(),
-        ),
-      ],
     );
   }
 
   Widget _buildDashboardContent() {
-    return CustomRefreshWrapper(
-      onRefresh: _refreshData,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(context.horizontalPadding),
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (!context.isMobile) _buildHeader(),
-            if (!context.isMobile) const SizedBox(height: 32),
-            _buildSummaryCards(),
-            SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
-            _buildChartsSection(),
-            SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
-            _buildDataTable(),
-            const SizedBox(height: 32),
-          ],
-        ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(),
+          const SizedBox(height: 32),
+          _buildSummaryCards(),
+          const SizedBox(height: 32),
+          _buildChartsSection(),
+          const SizedBox(height: 32),
+          _buildDataTable(),
+          const SizedBox(height: 32),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
-    return ResponsiveRow(
+    return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '📊 Water Quality Dashboard',
-                style: AppTextStyles.heading2.copyWith(
-                  color: AppColors.charcoal,
-                  fontWeight: FontWeight.w800,
-                  fontSize: ResponsiveUtils.getScaledFontSize(context, 28),
-                ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '📊 Water Quality Dashboard',
+              style: AppTextStyles.heading2.copyWith(
+                color: AppColors.charcoal,
+                fontWeight: FontWeight.w800,
               ),
-              const SizedBox(height: 8),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Real-time monitoring and analysis',
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.mediumGray,
+              ),
+            ),
+          ],
+        ),
+        CupertinoButton(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          onPressed: _isLoading ? null : _refreshData,
+          child: Row(
+            children: [
+              if (_isLoading)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                const Icon(CupertinoIcons.refresh, size: 18),
+              const SizedBox(width: 8),
               Text(
-                'Real-time monitoring and analysis',
-                style: AppTextStyles.body.copyWith(
-                  color: AppColors.mediumGray,
-                  fontSize: ResponsiveUtils.getScaledFontSize(context, 15),
+                _isLoading ? 'Refreshing...' : 'Refresh',
+                style: AppTextStyles.button.copyWith(
+                  color: _isLoading
+                      ? AppColors.mediumGray
+                      : AppColors.darkVanilla,
                 ),
               ),
             ],
           ),
-        ),
-        ResponsiveButton(
-          label: _isLoading ? 'Refreshing...' : 'Refresh',
-          icon: CupertinoIcons.refresh,
-          onPressed: _isLoading ? null : _refreshData,
-          isLoading: _isLoading,
-          size: context.isMobile ? ButtonSize.small : ButtonSize.medium,
         ),
       ],
     );
   }
 
   Widget _buildSummaryCards() {
-    if (context.isMobile) {
-      return Column(
-        children: [
-          ResponsiveGrid(
-            mobileColumns: 2,
-            tabletColumns: 4,
-            desktopColumns: 4,
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              AnimatedListItem(
-                index: 0,
-                child: _buildSummaryCard(
-                  '📋 Total Records',
-                  '${sampleData.length}',
-                  AppColors.darkVanilla,
-                ),
-              ),
-              AnimatedListItem(
-                index: 1,
-                child: _buildSummaryCard(
-                  '✅ Safe',
-                  '${_countStatus("Safe")}',
-                  AppColors.success,
-                ),
-              ),
-              AnimatedListItem(
-                index: 2,
-                child: _buildSummaryCard(
-                  '⚠️ Warning',
-                  '${_countStatus("Warning")}',
-                  AppColors.warning,
-                ),
-              ),
-              AnimatedListItem(
-                index: 3,
-                child: _buildSummaryCard(
-                  '❌ Critical',
-                  '${_countStatus("Critical")}',
-                  AppColors.error,
-                ),
-              ),
-            ],
-          ),
-        ],
-      );
-    }
-
     return SizedBox(
       height: 120,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          AnimatedListItem(
-            index: 0,
-            child: _buildSummaryCard(
-              '📋 Total Records',
-              '${sampleData.length}',
-              AppColors.darkVanilla,
-            ),
+          _buildSummaryCard(
+            '📋 Total Records',
+            '${sampleData.length}',
+            AppColors.darkVanilla,
           ),
           const SizedBox(width: 16),
-          AnimatedListItem(
-            index: 1,
-            child: _buildSummaryCard(
-              '✅ Safe',
-              '${_countStatus("Safe")}',
-              AppColors.success,
-            ),
+          _buildSummaryCard(
+            '✅ Safe',
+            '${_countStatus("Safe")}',
+            AppColors.success,
           ),
           const SizedBox(width: 16),
-          AnimatedListItem(
-            index: 2,
-            child: _buildSummaryCard(
-              '⚠️ Warning',
-              '${_countStatus("Warning")}',
-              AppColors.warning,
-            ),
+          _buildSummaryCard(
+            '⚠️ Warning',
+            '${_countStatus("Warning")}',
+            AppColors.warning,
           ),
           const SizedBox(width: 16),
-          AnimatedListItem(
-            index: 3,
-            child: _buildSummaryCard(
-              '❌ Critical',
-              '${_countStatus("Critical")}',
-              AppColors.error,
-            ),
+          _buildSummaryCard(
+            '❌ Critical',
+            '${_countStatus("Critical")}',
+            AppColors.error,
           ),
         ],
       ),
@@ -473,67 +375,55 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
   }
 
   Widget _buildSummaryCard(String title, String value, Color color) {
-    // Create accessible label
-    final semanticLabel = '$title: $value';
-    
-    return Semantics(
-      label: semanticLabel,
-      button: false,
-      container: true,
-      child: HoverCard(
-        child: Container(
-          width: 160,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.darkCream.withOpacity(0.2),
-              width: 1,
+    return Container(
+      width: 160,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.darkCream.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.charcoal.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: AppTextStyles.buttonSmall.copyWith(
+              color: AppColors.mediumGray,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.charcoal.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                value,
+                style: AppTextStyles.heading2.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Container(
+                width: 4,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ],
           ),
-          child: ExcludeSemantics(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.buttonSmall.copyWith(
-                    color: AppColors.mediumGray,
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      value,
-                      style: AppTextStyles.heading2.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Container(
-                      width: 4,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+        ],
       ),
     );
   }

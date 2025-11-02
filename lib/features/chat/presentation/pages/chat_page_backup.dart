@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:pure_health/core/constants/color_constants.dart';
 import 'package:pure_health/core/theme/text_styles.dart';
 import 'package:pure_health/shared/widgets/custom_sidebar.dart';
-import 'package:pure_health/shared/widgets/toast_notification.dart';
 import '../viewmodel/chat_viewmodel.dart';
 
 class ChatPage extends StatefulWidget {
@@ -62,22 +61,6 @@ class _ChatPageState extends State<ChatPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: 1.0),
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeOutBack,
-            builder: (context, value, child) {
-              return Transform.scale(
-                scale: value,
-                child: child,
-              );
-            },
-            child: Text(
-              '💧',
-              style: const TextStyle(fontSize: 80),
-            ),
-          ),
-          const SizedBox(height: 24),
           Text(
             'Good evening',
             style: AppTextStyles.heading1.copyWith(
@@ -161,7 +144,6 @@ class _ChatPageState extends State<ChatPage> {
                             color: AppColors.lightText,
                             fontSize: 14,
                           ),
-                          onSubmitted: (_) => _sendMessage(viewModel),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -386,9 +368,7 @@ class _ChatPageState extends State<ChatPage> {
               CupertinoButton(
                 padding: const EdgeInsets.all(6),
                 minSize: 28,
-                onPressed: viewModel.isLoading 
-                    ? null 
-                    : () => ToastNotification.info(context, 'Filters coming soon...'),
+                onPressed: viewModel.isLoading ? null : () {},
                 child: Icon(
                   CupertinoIcons.slider_horizontal_3,
                   color: viewModel.isLoading
@@ -403,9 +383,7 @@ class _ChatPageState extends State<ChatPage> {
               CupertinoButton(
                 padding: const EdgeInsets.all(6),
                 minSize: 28,
-                onPressed: viewModel.isLoading 
-                    ? null 
-                    : () => ToastNotification.info(context, 'History coming soon...'),
+                onPressed: viewModel.isLoading ? null : () {},
                 child: Icon(
                   CupertinoIcons.timer,
                   color: viewModel.isLoading
@@ -529,14 +507,21 @@ class _ChatPageState extends State<ChatPage> {
     try {
       await viewModel.uploadFile();
       if (mounted) {
-        ToastNotification.success(
-          context,
-          'File uploaded: ${viewModel.fileInfo}',
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ File uploaded: ${viewModel.fileInfo}'),
+            backgroundColor: AppColors.success,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ToastNotification.error(context, 'Upload failed: ${e.toString()}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     }
   }
@@ -551,7 +536,12 @@ class _ChatPageState extends State<ChatPage> {
       await viewModel.sendMessage(message);
     } catch (e) {
       if (mounted) {
-        ToastNotification.error(context, 'Message failed: ${e.toString()}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     }
   }

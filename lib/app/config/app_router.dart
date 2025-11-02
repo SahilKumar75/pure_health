@@ -8,17 +8,28 @@ import 'package:pure_health/features/settings/presentation/pages/settings_page.d
 import 'package:pure_health/features/chat/presentation/pages/chat_page.dart';
 import 'package:pure_health/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:pure_health/features/reports/presentation/pages/reports_page.dart';
+import 'package:pure_health/shared/widgets/page_transitions.dart';
 
-/// Cupertino page transition
-CustomTransitionPage<T> cupertinoPage<T>({required Widget child}) =>
+/// Custom smooth page transition with fade + slide effect
+CustomTransitionPage<T> smoothPage<T>({required Widget child}) =>
     CustomTransitionPage<T>(
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          CupertinoPageTransition(
-            primaryRouteAnimation: animation,
-            secondaryRouteAnimation: secondaryAnimation,
-            linearTransition: true,
-            child: child,
+          FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
+            ),
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.03, 0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
+              child: child,
+            ),
           ),
     );
 
@@ -131,7 +142,7 @@ class AppRouter {
             path: '/',
             name: 'home',
             pageBuilder: (context, state) =>
-                cupertinoPage(child: const HomePage()),
+                smoothPage(child: const HomePage()),
           ),
 
           // Dashboard
@@ -139,7 +150,7 @@ class AppRouter {
             path: '/dashboard',
             name: 'dashboard',
             pageBuilder: (context, state) =>
-                cupertinoPage(child: const DashboardPage()),
+                smoothPage(child: const DashboardPage()),
           ),
 
           // Chat
@@ -147,7 +158,7 @@ class AppRouter {
             path: '/chat',
             name: 'chat',
             pageBuilder: (context, state) =>
-                cupertinoPage(child: const ChatPage()),
+                smoothPage(child: const ChatPage()),
           ),
 
           // Reports
@@ -155,7 +166,7 @@ class AppRouter {
             path: '/reports',
             name: 'reports',
             pageBuilder: (context, state) =>
-                cupertinoPage(child: const ReportsPage()),
+                smoothPage(child: const ReportsPage()),
           ),
 
           // History
@@ -163,7 +174,7 @@ class AppRouter {
             path: '/history',
             name: 'history',
             pageBuilder: (context, state) =>
-                cupertinoPage(child: const HistoryReportPage()),
+                smoothPage(child: const HistoryReportPage()),
           ),
 
           // Settings
@@ -171,7 +182,7 @@ class AppRouter {
             path: '/settings',
             name: 'settings',
             pageBuilder: (context, state) =>
-                cupertinoPage(child: const SettingsPage()),
+                smoothPage(child: const SettingsPage()),
           ),
 
           // Profile
@@ -179,7 +190,7 @@ class AppRouter {
             path: '/profile',
             name: 'profile',
             pageBuilder: (context, state) =>
-                cupertinoPage(child: const ProfilePage()),
+                smoothPage(child: const ProfilePage()),
           ),
         ],
       ),

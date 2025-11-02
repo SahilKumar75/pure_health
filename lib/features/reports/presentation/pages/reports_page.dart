@@ -4,6 +4,11 @@ import 'package:pure_health/core/constants/color_constants.dart';
 import 'package:pure_health/core/theme/text_styles.dart';
 import 'package:pure_health/core/services/report_service.dart';
 import 'package:pure_health/shared/widgets/custom_sidebar.dart';
+import 'package:pure_health/shared/widgets/skeleton_loader.dart';
+import 'package:pure_health/shared/widgets/empty_state_widget.dart';
+import 'package:pure_health/shared/widgets/toast_notification.dart';
+import 'package:pure_health/shared/widgets/enhanced_loading_widget.dart';
+import 'package:pure_health/shared/widgets/refresh_widgets.dart';
 import 'package:printing/printing.dart';
 
 class ReportsPage extends StatefulWidget {
@@ -16,6 +21,8 @@ class ReportsPage extends StatefulWidget {
 class _ReportsPageState extends State<ReportsPage> {
   int _selectedIndex = 6;
   bool _isGenerating = false;
+  bool _isInitialLoading = true;
+  List<Map<String, dynamic>> _recentReports = [];
 
   final List<Map<String, dynamic>> sampleData = [
     {
@@ -50,6 +57,51 @@ class _ReportsPageState extends State<ReportsPage> {
     },
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadRecentReports();
+  }
+
+  Future<void> _loadRecentReports() async {
+    setState(() => _isInitialLoading = true);
+    await Future.delayed(const Duration(milliseconds: 800));
+    
+    if (mounted) {
+      setState(() {
+        _recentReports = [
+          {
+            'title': 'Weekly Report - Nov 02, 2025',
+            'format': 'PDF',
+            'size': '2.4 MB',
+            'date': '2025-11-02'
+          },
+          {
+            'title': 'Monthly Analysis - October',
+            'format': 'Excel',
+            'size': '1.8 MB',
+            'date': '2025-10-31'
+          },
+          {
+            'title': 'Quarterly Review Q3',
+            'format': 'PDF',
+            'size': '5.2 MB',
+            'date': '2025-09-30'
+          },
+        ];
+        _isInitialLoading = false;
+      });
+    }
+  }
+
+  Future<void> _refreshReports() async {
+    await Future.delayed(const Duration(milliseconds: 1200));
+    await _loadRecentReports();
+    if (mounted) {
+      ToastNotification.success(context, 'Reports refreshed!');
+    }
+  }
+
   Future<void> _generateAndPreviewPDF() async {
     setState(() => _isGenerating = true);
 
@@ -65,18 +117,16 @@ class _ReportsPageState extends State<ReportsPage> {
         await Printing.layoutPdf(
           onLayout: (_) => pdfBytes,
         );
+        ToastNotification.success(context, 'PDF generated successfully!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error generating PDF: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ToastNotification.error(context, 'Failed to generate PDF');
       }
     } finally {
-      setState(() => _isGenerating = false);
+      if (mounted) {
+        setState(() => _isGenerating = false);
+      }
     }
   }
 
@@ -86,104 +136,195 @@ class _ReportsPageState extends State<ReportsPage> {
       print('CSV Generated:\n$csv');
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('CSV downloaded successfully'),
-            backgroundColor: AppColors.success,
-          ),
-        );
+        ToastNotification.success(context, 'CSV downloaded successfully!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ToastNotification.error(context, 'Failed to download CSV');
       }
     }
+  }
+
+  Future<void> _generateExcel() async {
+    ToastNotification.info(context, 'Excel generation coming soon...');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.lightCream,
-      body: Row(
+      body: Stack(
         children: [
-          CustomSidebar(
-            selectedIndex: _selectedIndex,
-            onItemSelected: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
+          Row(
+            children: [
+              CustomSidebar(
+                selectedIndex: _selectedIndex,
+                onItemSelected: (index) {
+                  setState(() {
+                    _selectedIndex = index;
+                  });
+                },
+              ),
+              Expanded(
+                child: _isInitialLoading
+                    ? _buildLoadingState()
+                    : _buildReportsContent(),
+              ),
+            ],
           ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Text(
-                    '📊 Reports & Exports',
-                    style: AppTextStyles.heading2.copyWith(
-                      color: AppColors.charcoal,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Generate and download water quality reports',
-                    style: AppTextStyles.body.copyWith(
-                      color: AppColors.mediumGray,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
+          if (_isGenerating)
+            LoadingOverlay(
+              isLoading: _isGenerating,
+              message: 'Generating PDF Report...',
+              child: Container(),
+            ),
+        ],
+      ),
+    );
+  }
 
-                  // Report Cards
-                  Row(
-                    children: [
-                      _buildReportCard(
-                        icon: '📄',
-                        title: 'PDF Report',
-                        description: 'Professional PDF with charts',
-                        onTap: _generateAndPreviewPDF,
-                        isLoading: _isGenerating,
-                      ),
-                      const SizedBox(width: 16),
-                      _buildReportCard(
-                        icon: '📋',
-                        title: 'CSV Export',
-                        description: 'Raw data in CSV format',
-                        onTap: _downloadCSV,
-                      ),
-                      const SizedBox(width: 16),
-                      _buildReportCard(
-                        icon: '📊',
-                        title: 'Excel Report',
-                        description: 'Data analysis in Excel',
-                        onTap: () {},
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Recent Reports
-                  Text(
-                    'Recent Reports',
-                    style: AppTextStyles.heading3.copyWith(
-                      color: AppColors.charcoal,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildReportList(),
-                ],
+  Widget _buildLoadingState() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SkeletonLoader(
+            width: 300,
+            height: 32,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          const SizedBox(height: 8),
+          SkeletonLoader(
+            width: 400,
+            height: 16,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              Expanded(
+                child: SkeletonLoader(
+                  width: double.infinity,
+                  height: 220,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: SkeletonLoader(
+                  width: double.infinity,
+                  height: 220,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: SkeletonLoader(
+                  width: double.infinity,
+                  height: 220,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          SkeletonLoader(
+            width: 200,
+            height: 24,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          const SizedBox(height: 16),
+          ...List.generate(
+            3,
+            (index) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: SkeletonLoader(
+                width: double.infinity,
+                height: 80,
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildReportsContent() {
+    return CustomRefreshWrapper(
+      onRefresh: _refreshReports,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Text(
+              '📊 Reports & Exports',
+              style: AppTextStyles.heading2.copyWith(
+                color: AppColors.charcoal,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Generate and download water quality reports',
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.mediumGray,
+              ),
+            ),
+            const SizedBox(height: 32),
+
+          // Report Cards
+          Row(
+            children: [
+              _buildReportCard(
+                icon: '📄',
+                title: 'PDF Report',
+                description: 'Professional PDF with charts',
+                onTap: _generateAndPreviewPDF,
+                color: AppColors.error.withOpacity(0.1),
+                buttonColor: AppColors.error,
+              ),
+              const SizedBox(width: 16),
+              _buildReportCard(
+                icon: '📋',
+                title: 'CSV Export',
+                description: 'Raw data in CSV format',
+                onTap: _downloadCSV,
+                color: AppColors.success.withOpacity(0.1),
+                buttonColor: AppColors.success,
+              ),
+              const SizedBox(width: 16),
+              _buildReportCard(
+                icon: '📊',
+                title: 'Excel Report',
+                description: 'Data analysis in Excel',
+                onTap: _generateExcel,
+                color: AppColors.accentPurple.withOpacity(0.1),
+                buttonColor: AppColors.accentPurple,
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+
+          // Recent Reports
+          Text(
+            'Recent Reports',
+            style: AppTextStyles.heading3.copyWith(
+              color: AppColors.charcoal,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _recentReports.isEmpty
+              ? EmptyStates.noData(
+                  onAction: _generateAndPreviewPDF,
+                )
+              : _buildReportList(),
+        ],
+      ),
       ),
     );
   }
@@ -193,7 +334,8 @@ class _ReportsPageState extends State<ReportsPage> {
     required String title,
     required String description,
     required VoidCallback onTap,
-    bool isLoading = false,
+    required Color color,
+    required Color buttonColor,
   }) {
     return Expanded(
       child: Container(
@@ -216,11 +358,18 @@ class _ReportsPageState extends State<ReportsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              icon,
-              style: const TextStyle(fontSize: 40),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                icon,
+                style: const TextStyle(fontSize: 32),
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Text(
               title,
               style: AppTextStyles.heading4.copyWith(
@@ -234,35 +383,24 @@ class _ReportsPageState extends State<ReportsPage> {
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.mediumGray,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isLoading ? null : onTap,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.darkVanilla,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              child: CupertinoButton(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                color: buttonColor,
+                borderRadius: BorderRadius.circular(8),
+                onPressed: onTap,
+                child: Text(
+                  'Generate',
+                  style: AppTextStyles.button.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                child: isLoading
-                    ? SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.white,
-                          ),
-                        ),
-                      )
-                    : Text(
-                        'Generate',
-                        style: AppTextStyles.button.copyWith(
-                          color: AppColors.white,
-                        ),
-                      ),
               ),
             ),
           ],
@@ -272,29 +410,8 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _buildReportList() {
-    final reports = [
-      {
-        'title': 'Weekly Report - Nov 02, 2025',
-        'format': 'PDF',
-        'size': '2.4 MB',
-        'date': '2025-11-02'
-      },
-      {
-        'title': 'Monthly Analysis - October',
-        'format': 'Excel',
-        'size': '1.8 MB',
-        'date': '2025-10-31'
-      },
-      {
-        'title': 'Quarterly Review Q3',
-        'format': 'PDF',
-        'size': '5.2 MB',
-        'date': '2025-09-30'
-      },
-    ];
-
     return Column(
-      children: reports
+      children: _recentReports
           .map(
             (report) => Container(
               margin: const EdgeInsets.only(bottom: 12),
@@ -306,51 +423,85 @@ class _ReportsPageState extends State<ReportsPage> {
                   color: AppColors.darkCream.withOpacity(0.2),
                   width: 1,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.charcoal.withOpacity(0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        report['title']!,
-                        style: AppTextStyles.button.copyWith(
-                          color: AppColors.charcoal,
-                          fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          report['title']!,
+                          style: AppTextStyles.button.copyWith(
+                            color: AppColors.charcoal,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            '${report['format']} • ${report['size']}',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.mediumGray,
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: report['format'] == 'PDF'
+                                    ? AppColors.error.withOpacity(0.1)
+                                    : AppColors.success.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                report['format']!,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: report['format'] == 'PDF'
+                                      ? AppColors.error
+                                      : AppColors.success,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            report['date']!,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.mediumGray,
-                              fontStyle: FontStyle.italic,
+                            const SizedBox(width: 8),
+                            Text(
+                              '${report['size']}',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.mediumGray,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                            const SizedBox(width: 12),
+                            Text(
+                              report['date']!,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.mediumGray,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                   CupertinoButton(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
+                    padding: const EdgeInsets.all(8),
                     child: Icon(
                       CupertinoIcons.arrow_down_to_line,
-                      color: AppColors.darkVanilla,
+                      color: AppColors.accentPink,
+                      size: 22,
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      ToastNotification.success(
+                        context,
+                        'Downloading ${report['title']}...',
+                      );
+                    },
                   ),
                 ],
               ),
