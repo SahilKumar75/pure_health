@@ -4,7 +4,6 @@ import 'package:pure_health/core/constants/color_constants.dart';
 import 'package:pure_health/core/theme/text_styles.dart';
 import 'package:pure_health/core/utils/responsive_utils.dart';
 import 'package:pure_health/core/utils/accessibility_utils.dart';
-import 'package:pure_health/core/theme/high_contrast_theme.dart';
 import 'package:pure_health/shared/widgets/custom_sidebar.dart';
 import 'package:pure_health/shared/widgets/water_quality_charts.dart';
 import 'package:pure_health/shared/widgets/skeleton_loader.dart';
@@ -15,6 +14,8 @@ import 'package:pure_health/shared/widgets/responsive_button.dart';
 import 'package:pure_health/shared/widgets/refresh_widgets.dart';
 import 'package:pure_health/shared/widgets/hover_animations.dart';
 import 'package:pure_health/shared/widgets/page_transitions.dart';
+import 'package:pure_health/shared/widgets/advanced_data_table.dart';
+import 'package:pure_health/shared/widgets/compliance_monitor.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);
@@ -204,6 +205,8 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
             _buildSummaryCards(),
             SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
             _buildChartsSection(),
+            SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
+            _buildComplianceSection(),
             SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
             _buildDataTable(),
             const SizedBox(height: 32),
@@ -538,161 +541,54 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
     );
   }
 
+  Widget _buildComplianceSection() {
+    return ComplianceMonitor(
+      data: sampleData,
+    );
+  }
+
   Widget _buildDataTable() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.darkCream.withOpacity(0.2),
-          width: 1,
+    return AdvancedDataTable(
+      columns: const [
+        DataTableColumn(
+          key: 'location',
+          label: 'Location',
+          sortable: true,
+          filterable: true,
         ),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: AppColors.darkCream.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Text(
-              '📋 Recent Data',
-              style: AppTextStyles.heading4.copyWith(
-                color: AppColors.charcoal,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              dataRowHeight: 56,
-              headingRowColor: MaterialStateColor.resolveWith(
-                (states) => AppColors.darkCream.withOpacity(0.05),
-              ),
-              columns: [
-                DataColumn(
-                  label: Text(
-                    'Location',
-                    style: AppTextStyles.buttonSmall.copyWith(
-                      color: AppColors.charcoal,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'pH',
-                    style: AppTextStyles.buttonSmall.copyWith(
-                      color: AppColors.charcoal,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Turbidity',
-                    style: AppTextStyles.buttonSmall.copyWith(
-                      color: AppColors.charcoal,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Temp',
-                    style: AppTextStyles.buttonSmall.copyWith(
-                      color: AppColors.charcoal,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Status',
-                    style: AppTextStyles.buttonSmall.copyWith(
-                      color: AppColors.charcoal,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-              rows: sampleData
-                  .map(
-                    (data) => DataRow(
-                      cells: [
-                        DataCell(
-                          Text(
-                            data['location'],
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.charcoal,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            (data['pH'] as num).toStringAsFixed(1),
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.charcoal,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            (data['turbidity'] as num).toStringAsFixed(1),
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.charcoal,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            '${(data['temperature'] as num).toStringAsFixed(1)}°C',
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.charcoal,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: data['status'] == 'Safe'
-                                  ? AppColors.success.withOpacity(0.2)
-                                  : data['status'] == 'Warning'
-                                      ? AppColors.warning.withOpacity(0.2)
-                                      : AppColors.error.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              data['status'],
-                              style: AppTextStyles.buttonSmall.copyWith(
-                                color: data['status'] == 'Safe'
-                                    ? AppColors.success
-                                    : data['status'] == 'Warning'
-                                        ? AppColors.warning
-                                        : AppColors.error,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-        ],
-      ),
+        DataTableColumn(
+          key: 'pH',
+          label: 'pH Level',
+          sortable: true,
+          filterable: true,
+        ),
+        DataTableColumn(
+          key: 'turbidity',
+          label: 'Turbidity (NTU)',
+          sortable: true,
+          filterable: true,
+        ),
+        DataTableColumn(
+          key: 'dissolvedOxygen',
+          label: 'Dissolved Oxygen (mg/L)',
+          sortable: true,
+          filterable: true,
+        ),
+        DataTableColumn(
+          key: 'temperature',
+          label: 'Temperature',
+          sortable: true,
+          filterable: true,
+        ),
+        DataTableColumn(
+          key: 'status',
+          label: 'Status',
+          sortable: true,
+          filterable: true,
+        ),
+      ],
+      data: sampleData,
+      rowsPerPage: 10,
     );
   }
 }

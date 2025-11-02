@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:pure_health/core/constants/color_constants.dart';
 import 'package:pure_health/core/theme/text_styles.dart';
 import 'package:pure_health/core/services/report_service.dart';
+import 'package:pure_health/core/services/data_export_service.dart';
 import 'package:pure_health/shared/widgets/custom_sidebar.dart';
 import 'package:pure_health/shared/widgets/skeleton_loader.dart';
 import 'package:pure_health/shared/widgets/empty_state_widget.dart';
@@ -132,21 +133,62 @@ class _ReportsPageState extends State<ReportsPage> {
 
   Future<void> _downloadCSV() async {
     try {
-      final csv = ReportService.generateCSVReport(sampleData);
-      print('CSV Generated:\n$csv');
+      setState(() => _isGenerating = true);
+      final csvContent = await DataExportService.exportToCSV(sampleData);
+      final filename = '${DataExportService.generateGovernmentFilename('water_quality')}.csv';
+      
+      print('CSV Generated: $filename\n$csvContent');
       
       if (mounted) {
-        ToastNotification.success(context, 'CSV downloaded successfully!');
+        ToastNotification.success(context, 'CSV exported: $filename');
       }
     } catch (e) {
       if (mounted) {
-        ToastNotification.error(context, 'Failed to download CSV');
+        ToastNotification.error(context, 'Failed to export CSV');
       }
+    } finally {
+      setState(() => _isGenerating = false);
     }
   }
 
   Future<void> _generateExcel() async {
-    ToastNotification.info(context, 'Excel generation coming soon...');
+    try {
+      setState(() => _isGenerating = true);
+      final jsonContent = await DataExportService.exportToJSON(sampleData);
+      final filename = '${DataExportService.generateGovernmentFilename('water_quality')}.json';
+      
+      print('JSON Generated: $filename\n$jsonContent');
+      
+      if (mounted) {
+        ToastNotification.success(context, 'Data exported: $filename');
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastNotification.error(context, 'Failed to export data');
+      }
+    } finally {
+      setState(() => _isGenerating = false);
+    }
+  }
+
+  Future<void> _generateComplianceReport() async {
+    try {
+      setState(() => _isGenerating = true);
+      final report = await DataExportService.generateComplianceReport(sampleData);
+      final filename = '${DataExportService.generateGovernmentFilename('compliance_report')}.txt';
+      
+      print('Compliance Report: $filename\n$report');
+      
+      if (mounted) {
+        ToastNotification.success(context, 'Compliance report generated: $filename');
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastNotification.error(context, 'Failed to generate compliance report');
+      }
+    } finally {
+      setState(() => _isGenerating = false);
+    }
   }
 
   @override
@@ -277,7 +319,7 @@ class _ReportsPageState extends State<ReportsPage> {
             ),
             const SizedBox(height: 32),
 
-          // Report Cards
+          // Report Cards - Row 1
           Row(
             children: [
               _buildReportCard(
@@ -297,14 +339,28 @@ class _ReportsPageState extends State<ReportsPage> {
                 color: AppColors.success.withOpacity(0.1),
                 buttonColor: AppColors.success,
               ),
-              const SizedBox(width: 16),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Report Cards - Row 2
+          Row(
+            children: [
               _buildReportCard(
                 icon: '📊',
-                title: 'Excel Report',
-                description: 'Data analysis in Excel',
+                title: 'JSON Export',
+                description: 'Data in JSON format',
                 onTap: _generateExcel,
                 color: AppColors.accentPurple.withOpacity(0.1),
                 buttonColor: AppColors.accentPurple,
+              ),
+              const SizedBox(width: 16),
+              _buildReportCard(
+                icon: '✓',
+                title: 'Compliance Report',
+                description: 'Standards compliance check',
+                onTap: _generateComplianceReport,
+                color: AppColors.darkVanilla.withOpacity(0.1),
+                buttonColor: AppColors.accentOrange,
               ),
             ],
           ),

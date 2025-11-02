@@ -8,7 +8,6 @@ import 'package:pure_health/features/settings/presentation/pages/settings_page.d
 import 'package:pure_health/features/chat/presentation/pages/chat_page.dart';
 import 'package:pure_health/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:pure_health/features/reports/presentation/pages/reports_page.dart';
-import 'package:pure_health/shared/widgets/page_transitions.dart';
 
 /// Custom smooth page transition with fade + slide effect
 CustomTransitionPage<T> smoothPage<T>({required Widget child}) =>

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:responsive_sizer/responsive_sizer.dart';
 import 'package:pure_health/core/utils/responsive_extensions.dart';
 
 class ResponsiveScaffold extends StatelessWidget {
@@ -25,7 +24,6 @@ class ResponsiveScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMobile = context.isMobile;
-    final isTablet = context.isTablet;
 
     if (isMobile) {
       return Scaffold(

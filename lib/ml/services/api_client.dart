@@ -3,7 +3,6 @@ import 'dart:convert';
 import '../utils/ml_constants.dart';
 
 class MLApiClient {
-  static const String _tag = 'MLApiClient';
   final http.Client httpClient;
 
   MLApiClient({http.Client? httpClient})
