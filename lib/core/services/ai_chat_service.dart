@@ -25,7 +25,7 @@ class AIChatService {
   Map<String, dynamic>? _uploadedFileData;
 
   AIChatService({
-    String baseUrl = 'http://172.20.10.4:8000',
+    String baseUrl = 'http://localhost:8000',
   })  : baseUrl = baseUrl,
         _dio = Dio(
           BaseOptions(

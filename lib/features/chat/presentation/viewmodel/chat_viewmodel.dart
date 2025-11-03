@@ -11,9 +11,9 @@ class ChatViewModel extends ChangeNotifier {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
 
-  ChatViewModel({AIChatService? chatService})
-      : _chatService = chatService ??
-            AIChatService(baseUrl: 'http://172.20.10.4:8000');
+    ChatViewModel()
+      : _chatService =
+            AIChatService(baseUrl: 'http://localhost:8000');
 
   bool get isLoading => _isLoading;
   bool get hasMessages => _hasMessages;

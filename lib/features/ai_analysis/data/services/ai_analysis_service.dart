@@ -7,16 +7,12 @@ class AIAnalysisService {
   final Dio _dio;
   final String baseUrl;
 
-  AIAnalysisService({
-    String baseUrl = 'http://172.20.10.4:8000',
-  })  : baseUrl = baseUrl,
-        _dio = Dio(
-          BaseOptions(
-            connectTimeout: const Duration(seconds: 60),
-            receiveTimeout: const Duration(seconds: 60),
-            contentType: 'application/json',
-          ),
-        ) {
+  AIAnalysisService({this.baseUrl = 'http://localhost:8000'})
+      : _dio = Dio(BaseOptions(
+          connectTimeout: const Duration(minutes: 1),
+          receiveTimeout: const Duration(minutes: 1),
+          contentType: 'application/json',
+        )) {
     _setupInterceptors();
   }
 

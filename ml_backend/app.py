@@ -8,12 +8,14 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-# Enable CORS for all routes
+# Enable CORS for all routes with file upload support
 CORS(app, resources={
     r"/api/*": {
         "origins": "*",
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
+        "allow_headers": ["Content-Type", "Authorization", "Accept"],
+        "expose_headers": ["Content-Type"],
+        "supports_credentials": False
     }
 })
 
