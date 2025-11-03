@@ -24,6 +24,21 @@ class AppColors {
   static const Color error = Color(0xFFEF4444);
   static const Color info = Color(0xFF3B82F6);
   
+  // Government & Professional colors
+  static const Color primaryBlue = Color(0xFF003B5C);    // Government blue
+  static const Color secondaryBlue = Color(0xFF0066A1);
+  static const Color lightBlue = Color(0xFFE8F4F8);
+  
+  // Chart colors
+  static const Color chartBlue = Color(0xFF2196F3);
+  static const Color chartOrange = Color(0xFFFF9800);
+  static const Color chartGreen = Color(0xFF4CAF50);
+  static const Color chartRed = Color(0xFFE91E63);
+  static const Color chartPurple = Color(0xFF9C27B0);
+  static const Color chartYellow = Color(0xFFFFEB3B);
+  static const Color chartTeal = Color(0xFF009688);
+  static const Color chartIndigo = Color(0xFF3F51B5);
+  
   // Borders
   static const Color borderLight = Color(0xFFe5e5e5);
   

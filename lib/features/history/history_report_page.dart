@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:pure_health/core/constants/color_constants.dart';
 import 'package:pure_health/core/theme/text_styles.dart';
+import 'package:pure_health/core/theme/government_theme.dart';
+import 'package:pure_health/core/services/data_export_service.dart';
 import 'package:pure_health/shared/widgets/custom_sidebar.dart';
 import 'package:pure_health/shared/widgets/skeleton_loader.dart';
 import 'package:pure_health/shared/widgets/empty_state_widget.dart';
 import 'package:pure_health/shared/widgets/toast_notification.dart';
 import 'package:pure_health/shared/widgets/refresh_widgets.dart';
+import 'package:pure_health/shared/widgets/advanced_data_table.dart';
 
 class HistoryReportPage extends StatefulWidget {
   const HistoryReportPage({super.key});
@@ -297,207 +300,164 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
   }
 
   Widget _buildHistoryTable() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.darkCream.withOpacity(0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.charcoal.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: AppColors.darkCream.withOpacity(0.2),
-                  width: 1,
-                ),
+    return Column(
+      children: [
+        // Header with export buttons
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: GovernmentTheme.governmentBlue.withOpacity(0.05),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(12),
+              topRight: Radius.circular(12),
+            ),
+            border: Border(
+              bottom: BorderSide(
+                color: GovernmentTheme.governmentBlue.withOpacity(0.2),
+                width: 1,
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Water Quality Records',
-                  style: AppTextStyles.heading4.copyWith(
-                    color: AppColors.charcoal,
-                    fontWeight: FontWeight.w700,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Historical Water Quality Records',
+                    style: AppTextStyles.heading3.copyWith(
+                      color: AppColors.charcoal,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentPink.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${_filteredData.length} records',
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_filteredData.length} records available',
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.accentPink,
-                      fontWeight: FontWeight.w600,
+                      color: AppColors.mediumGray,
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              dataRowHeight: 60,
-              headingRowColor: MaterialStateColor.resolveWith(
-                (states) => AppColors.darkCream.withOpacity(0.05),
+                ],
               ),
-              columns: [
-                DataColumn(
-                  label: Text(
-                    'Date',
-                    style: AppTextStyles.buttonSmall.copyWith(
-                      color: AppColors.charcoal,
-                      fontWeight: FontWeight.w600,
-                    ),
+              Row(
+                children: [
+                  _buildExportButton(
+                    icon: CupertinoIcons.doc_text,
+                    label: 'Export CSV',
+                    onPressed: _exportToCSV,
                   ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Location',
-                    style: AppTextStyles.buttonSmall.copyWith(
-                      color: AppColors.charcoal,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  const SizedBox(width: 12),
+                  _buildExportButton(
+                    icon: CupertinoIcons.arrow_down_doc,
+                    label: 'Export JSON',
+                    onPressed: _exportToJSON,
                   ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'pH',
-                    style: AppTextStyles.buttonSmall.copyWith(
-                      color: AppColors.charcoal,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Turbidity',
-                    style: AppTextStyles.buttonSmall.copyWith(
-                      color: AppColors.charcoal,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Status',
-                    style: AppTextStyles.buttonSmall.copyWith(
-                      color: AppColors.charcoal,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Action Taken',
-                    style: AppTextStyles.buttonSmall.copyWith(
-                      color: AppColors.charcoal,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-              rows: _filteredData
-                  .map(
-                    (record) => DataRow(
-                      cells: [
-                        DataCell(
-                          Text(
-                            record['date'],
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.charcoal,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            record['location'],
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.charcoal,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            (record['pH'] as num).toStringAsFixed(1),
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.charcoal,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            (record['turbidity'] as num).toStringAsFixed(1),
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.charcoal,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: record['status'] == 'Safe'
-                                  ? AppColors.success.withOpacity(0.15)
-                                  : record['status'] == 'Warning'
-                                      ? AppColors.warning.withOpacity(0.15)
-                                      : AppColors.error.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              record['status'],
-                              style: AppTextStyles.buttonSmall.copyWith(
-                                color: record['status'] == 'Safe'
-                                    ? AppColors.success
-                                    : record['status'] == 'Warning'
-                                        ? AppColors.warning
-                                        : AppColors.error,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            record['action'],
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.mediumGray,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                  .toList(),
-            ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
+        // Advanced Data Table
+        AdvancedDataTable(
+          columns: const [
+            DataTableColumn(
+              key: 'date',
+              label: 'Date',
+              sortable: true,
+              filterable: true,
+            ),
+            DataTableColumn(
+              key: 'location',
+              label: 'Location',
+              sortable: true,
+              filterable: true,
+            ),
+            DataTableColumn(
+              key: 'pH',
+              label: 'pH Level',
+              sortable: true,
+              filterable: true,
+            ),
+            DataTableColumn(
+              key: 'turbidity',
+              label: 'Turbidity (NTU)',
+              sortable: true,
+              filterable: true,
+            ),
+            DataTableColumn(
+              key: 'status',
+              label: 'Status',
+              sortable: true,
+              filterable: true,
+            ),
+            DataTableColumn(
+              key: 'action',
+              label: 'Action Taken',
+              sortable: false,
+              filterable: true,
+            ),
+          ],
+          data: _filteredData,
+          rowsPerPage: 15,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExportButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: GovernmentTheme.governmentBlue,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
     );
+  }
+
+  Future<void> _exportToCSV() async {
+    try {
+      final csvContent = await DataExportService.exportToCSV(_filteredData);
+      final filename = DataExportService.generateGovernmentFilename('history');
+      
+      // In production, save file here
+      print('CSV Export: $filename\n$csvContent');
+      
+      if (mounted) {
+        ToastNotification.success(context, 'Exported $filename');
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastNotification.error(context, 'Export failed');
+      }
+    }
+  }
+
+  Future<void> _exportToJSON() async {
+    try {
+      final jsonContent = await DataExportService.exportToJSON(_filteredData);
+      final filename = DataExportService.generateGovernmentFilename('history');
+      
+      // In production, save file here
+      print('JSON Export: $filename\n$jsonContent');
+      
+      if (mounted) {
+        ToastNotification.success(context, 'Exported $filename.json');
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastNotification.error(context, 'Export failed');
+      }
+    }
   }
 }

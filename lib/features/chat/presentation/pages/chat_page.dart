@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:pure_health/core/constants/color_constants.dart';
 import 'package:pure_health/core/theme/text_styles.dart';
+import 'package:pure_health/core/theme/government_theme.dart';
 import 'package:pure_health/shared/widgets/custom_sidebar.dart';
 import 'package:pure_health/shared/widgets/toast_notification.dart';
 import '../viewmodel/chat_viewmodel.dart';
@@ -58,67 +59,88 @@ class _ChatPageState extends State<ChatPage> {
 
   // Welcome screen with greeting
   Widget _buildWelcomeScreen(BuildContext context, ChatViewModel viewModel) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: 1.0),
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeOutBack,
-            builder: (context, value, child) {
-              return Transform.scale(
-                scale: value,
-                child: child,
-              );
-            },
-            child: Text(
-              '💧',
-              style: const TextStyle(fontSize: 80),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Good evening',
-            style: AppTextStyles.heading1.copyWith(
-              color: AppColors.lightText,
-              fontSize: 48,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Bruce Wayne',
-            style: AppTextStyles.body.copyWith(
-              color: AppColors.mediumText,
-              fontSize: 18,
-            ),
-          ),
-          const SizedBox(height: 48),
-          // Chat input box in center
-          Container(
-            constraints: const BoxConstraints(maxWidth: 1000),
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                Text(
-                  'Upload water quality data and start asking questions',
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.mediumText,
-                    fontSize: 16,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                // Centered input box
-                Container(
+    final timeOfDay = _getTimeOfDay();
+    
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 60),
+              // Icon
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeOutBack,
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: child,
+                  );
+                },
+                child: Container(
+                  width: 72,
+                  height: 72,
                   decoration: BoxDecoration(
+                    color: GovernmentTheme.governmentBlue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.borderLight,
-                      width: 1,
-                    ),
                   ),
+                  child: const Center(
+                    child: Text('💧', style: TextStyle(fontSize: 40)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Good $timeOfDay',
+                style: AppTextStyles.heading1.copyWith(
+                  color: AppColors.lightText,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Water Quality Analysis Assistant',
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.mediumText,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 48),
+              
+              // Quick action cards
+              Text(
+                'What can I help you with today?',
+                style: AppTextStyles.heading4.copyWith(
+                  color: AppColors.lightText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildSuggestionCards(viewModel),
+              const SizedBox(height: 48),
+              // Input prompt
+              Text(
+                'Or type your question below',
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.mediumText,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Centered input box
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.borderLight,
+                    width: 1,
+                  ),
+                ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 12,
@@ -205,65 +227,240 @@ class _ChatPageState extends State<ChatPage> {
                     ],
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
+  }
+
+  Widget _buildSuggestionCards(ChatViewModel viewModel) {
+    final suggestions = [
+      {
+        'icon': '📊',
+        'title': 'Analyze Trends',
+        'description': 'Get insights on water quality patterns over time',
+        'prompt': 'Analyze the water quality trends from my data and identify any concerning patterns.',
+      },
+      {
+        'icon': '📈',
+        'title': 'Generate Report',
+        'description': 'Create comprehensive compliance reports',
+        'prompt': 'Generate a detailed compliance report for all water quality parameters.',
+      },
+      {
+        'icon': '⚠️',
+        'title': 'Risk Assessment',
+        'description': 'Identify potential contamination risks',
+        'prompt': 'Assess the risk levels across all monitoring zones and provide recommendations.',
+      },
+      {
+        'icon': '🎯',
+        'title': 'Recommendations',
+        'description': 'Get actionable improvement suggestions',
+        'prompt': 'What actions should I take to improve water quality in critical zones?',
+      },
+    ];
+
+    return Wrap(
+      spacing: 16,
+      runSpacing: 16,
+      alignment: WrapAlignment.center,
+      children: suggestions.map((suggestion) {
+        return _buildSuggestionCard(
+          icon: suggestion['icon']!,
+          title: suggestion['title']!,
+          description: suggestion['description']!,
+          onTap: () {
+            viewModel.messageController.text = suggestion['prompt']!;
+            _sendMessage(viewModel);
+          },
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildSuggestionCard({
+    required String icon,
+    required String title,
+    required String description,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 200,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.darkBg3,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.borderLight,
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(icon, style: const TextStyle(fontSize: 24)),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: AppTextStyles.heading4.copyWith(
+                color: AppColors.lightText,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              description,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.mediumText,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getTimeOfDay() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'morning';
+    } else if (hour < 17) {
+      return 'afternoon';
+    } else {
+      return 'evening';
+    }
   }
 
   // Messages screen
   Widget _buildMessagesScreen(
       BuildContext context, ChatViewModel viewModel) {
-    return ListView.builder(
-      controller: viewModel.scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      itemCount: viewModel.messages.length,
-      itemBuilder: (context, index) {
+    return Column(
+      children: [
+        // Data upload banner
+        if (viewModel.fileUploaded && viewModel.fileInfo != null)
+          Container(
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: GovernmentTheme.governmentBlue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: GovernmentTheme.governmentBlue.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: GovernmentTheme.governmentBlue.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    CupertinoIcons.checkmark_circle_fill,
+                    color: GovernmentTheme.governmentBlue,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Data Connected',
+                        style: AppTextStyles.buttonSmall.copyWith(
+                          color: GovernmentTheme.governmentBlue,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        viewModel.fileInfo!,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.mediumText,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Expanded(
+          child: ListView.builder(
+            controller: viewModel.scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            itemCount: viewModel.messages.length,
+            itemBuilder: (context, index) {
         final message = viewModel.messages[index];
         final isUser = message.role == 'user';
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.only(bottom: 24),
           child: Row(
-            mainAxisAlignment:
-                isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!isUser)
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.darkBg3,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Text('🤖', style: TextStyle(fontSize: 18)),
+              // Avatar
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: isUser 
+                      ? GovernmentTheme.governmentBlue.withOpacity(0.1)
+                      : GovernmentTheme.governmentBlue.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isUser
+                        ? GovernmentTheme.governmentBlue.withOpacity(0.3)
+                        : GovernmentTheme.governmentBlue.withOpacity(0.4),
+                    width: 1,
                   ),
                 ),
-              if (!isUser) const SizedBox(width: 12),
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isUser ? AppColors.accentPink : AppColors.darkBg3,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SelectableText(
-                        message.message,
-                        style: AppTextStyles.body.copyWith(
-                          color: isUser ? AppColors.darkBg2 : AppColors.lightText,
-                          fontSize: 14,
-                          height: 1.5,
-                        ),
+                child: Center(
+                  child: isUser
+                      ? Icon(
+                          CupertinoIcons.person_fill,
+                          size: 18,
+                          color: GovernmentTheme.governmentBlue,
+                        )
+                      : const Text('💧', style: TextStyle(fontSize: 20)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Role label
+                    Text(
+                      isUser ? 'You' : 'Water Quality Assistant',
+                      style: AppTextStyles.buttonSmall.copyWith(
+                        color: AppColors.mediumText,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Message content
+                    SelectableText(
+                      message.message,
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.lightText,
+                        fontSize: 15,
+                        height: 1.6,
+                      ),
+                    ),
                       if (message.metadata != null &&
                           message.metadata!['prediction'] != null)
                         Column(
@@ -319,27 +516,16 @@ class _ChatPageState extends State<ChatPage> {
                             ),
                           ],
                         ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
-              if (isUser) const SizedBox(width: 12),
-              if (isUser)
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentPink,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Text('👤', style: TextStyle(fontSize: 18)),
-                  ),
-                ),
             ],
           ),
         );
       },
+          ),
+        ),
+      ],
     );
   }
 

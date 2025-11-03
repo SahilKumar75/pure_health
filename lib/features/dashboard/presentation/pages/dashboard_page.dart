@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
 import 'package:pure_health/core/constants/color_constants.dart';
 import 'package:pure_health/core/theme/text_styles.dart';
+import 'package:pure_health/core/theme/government_theme.dart';
 import 'package:pure_health/core/utils/responsive_utils.dart';
 import 'package:pure_health/core/utils/accessibility_utils.dart';
+import 'package:pure_health/core/services/notification_service.dart';
 import 'package:pure_health/shared/widgets/custom_sidebar.dart';
 import 'package:pure_health/shared/widgets/water_quality_charts.dart';
 import 'package:pure_health/shared/widgets/skeleton_loader.dart';
@@ -16,6 +20,12 @@ import 'package:pure_health/shared/widgets/hover_animations.dart';
 import 'package:pure_health/shared/widgets/page_transitions.dart';
 import 'package:pure_health/shared/widgets/advanced_data_table.dart';
 import 'package:pure_health/shared/widgets/compliance_monitor.dart';
+import 'package:pure_health/shared/widgets/notification_bell.dart';
+import 'package:pure_health/shared/widgets/notification_panel.dart';
+import 'package:pure_health/shared/widgets/trend_chart.dart';
+import 'package:pure_health/shared/widgets/parameter_comparison_chart.dart';
+import 'package:pure_health/shared/widgets/zone_heatmap.dart';
+import 'package:intl/intl.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);
@@ -28,6 +38,10 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
   int _selectedIndex = 1;
   bool _isLoading = false;
   bool _hasError = false;
+  bool _autoRefreshEnabled = true;
+  DateTime? _lastUpdated;
+  Timer? _refreshTimer;
+  bool _showNewDataIndicator = false;
 
   // Sample data - Replace with real backend data
   List<Map<String, dynamic>> sampleData = [
@@ -81,7 +95,39 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
   @override
   void initState() {
     super.initState();
+    _lastUpdated = DateTime.now();
     _loadData();
+    _startAutoRefresh();
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startAutoRefresh() {
+    _refreshTimer?.cancel();
+    if (_autoRefreshEnabled) {
+      _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+        if (mounted && !_isLoading) {
+          _refreshDataSilently();
+        }
+      });
+    }
+  }
+
+  void _toggleAutoRefresh() {
+    setState(() {
+      _autoRefreshEnabled = !_autoRefreshEnabled;
+      if (_autoRefreshEnabled) {
+        _startAutoRefresh();
+        ToastNotification.success(context, 'Auto-refresh enabled (30s)');
+      } else {
+        _refreshTimer?.cancel();
+        ToastNotification.info(context, 'Auto-refresh disabled');
+      }
+    });
   }
 
   Future<void> _loadData() async {
@@ -91,8 +137,68 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
     await Future.delayed(const Duration(milliseconds: 1500));
     
     if (mounted) {
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _lastUpdated = DateTime.now();
+      });
     }
+  }
+
+  Future<void> _refreshDataSilently() async {
+    // Silent refresh without showing loading indicator
+    try {
+      // Simulate API call - in production, fetch new data here
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Check parameters and generate alerts
+      _checkParametersForAlerts();
+      
+      if (mounted) {
+        setState(() {
+          _lastUpdated = DateTime.now();
+          _showNewDataIndicator = true;
+        });
+        
+        // Hide indicator after 3 seconds
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            setState(() => _showNewDataIndicator = false);
+          }
+        });
+      }
+    } catch (e) {
+      // Silently handle errors for background refresh
+    }
+  }
+
+  void _checkParametersForAlerts() {
+    final notificationService = Provider.of<NotificationService>(context, listen: false);
+    
+    // Check all data points for threshold violations
+    for (var data in sampleData) {
+      notificationService.checkWaterQualityParameters(data);
+    }
+  }
+
+  List<WaterQualityDataPoint> _convertToChartData() {
+    return sampleData.map((data) {
+      DateTime timestamp;
+      try {
+        timestamp = DateFormat('yyyy-MM-dd HH:mm').parse(data['timestamp']);
+      } catch (e) {
+        timestamp = DateTime.now();
+      }
+
+      return WaterQualityDataPoint(
+        timestamp: timestamp,
+        ph: (data['pH'] as num).toDouble(),
+        turbidity: (data['turbidity'] as num).toDouble(),
+        dissolvedOxygen: ((data['pH'] as num) + 2).toDouble(), // Simulated DO
+        temperature: (data['temperature'] as num).toDouble(),
+        conductivity: (data['conductivity'] as num).toDouble(),
+        location: data['location'] as String,
+      );
+    }).toList();
   }
 
   Future<void> _refreshData() async {
@@ -204,9 +310,13 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
             if (!context.isMobile) const SizedBox(height: 32),
             _buildSummaryCards(),
             SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
+            _buildNotificationSection(),
+            SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
             _buildChartsSection(),
             SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
             _buildComplianceSection(),
+            SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
+            _buildAdvancedVisualizationsSection(),
             SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
             _buildDataTable(),
             const SizedBox(height: 32),
@@ -225,34 +335,129 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '📊 Water Quality Dashboard',
-                style: AppTextStyles.heading2.copyWith(
-                  color: AppColors.charcoal,
-                  fontWeight: FontWeight.w800,
-                  fontSize: ResponsiveUtils.getScaledFontSize(context, 28),
-                ),
+              Row(
+                children: [
+                  Text(
+                    '📊 Water Quality Dashboard',
+                    style: AppTextStyles.heading2.copyWith(
+                      color: AppColors.charcoal,
+                      fontWeight: FontWeight.w800,
+                      fontSize: ResponsiveUtils.getScaledFontSize(context, 28),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  if (_showNewDataIndicator)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: AppColors.success,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            CupertinoIcons.checkmark_circle_fill,
+                            size: 14,
+                            color: AppColors.success,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Updated',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.success,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 8),
-              Text(
-                'Real-time monitoring and analysis',
-                style: AppTextStyles.body.copyWith(
-                  color: AppColors.mediumGray,
-                  fontSize: ResponsiveUtils.getScaledFontSize(context, 15),
-                ),
+              Row(
+                children: [
+                  Text(
+                    'Real-time monitoring and analysis',
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.mediumGray,
+                      fontSize: ResponsiveUtils.getScaledFontSize(context, 15),
+                    ),
+                  ),
+                  if (_lastUpdated != null) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      '•',
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.mediumGray,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Last updated: ${_getTimeAgo(_lastUpdated!)}',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.mediumGray,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
         ),
-        ResponsiveButton(
-          label: _isLoading ? 'Refreshing...' : 'Refresh',
-          icon: CupertinoIcons.refresh,
-          onPressed: _isLoading ? null : _refreshData,
-          isLoading: _isLoading,
-          size: context.isMobile ? ButtonSize.small : ButtonSize.medium,
+        Row(
+          children: [
+            // Notification Bell
+            const NotificationBell(),
+            const SizedBox(width: 8),
+            // Auto-refresh toggle
+            Tooltip(
+              message: _autoRefreshEnabled ? 'Disable auto-refresh' : 'Enable auto-refresh',
+              child: IconButton(
+                onPressed: _toggleAutoRefresh,
+                icon: Icon(
+                  _autoRefreshEnabled
+                      ? CupertinoIcons.pause_circle
+                      : CupertinoIcons.play_circle,
+                  color: _autoRefreshEnabled
+                      ? GovernmentTheme.governmentBlue
+                      : AppColors.mediumGray,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            ResponsiveButton(
+              label: _isLoading ? 'Refreshing...' : 'Refresh',
+              icon: CupertinoIcons.refresh,
+              onPressed: _isLoading ? null : _refreshData,
+              isLoading: _isLoading,
+              size: context.isMobile ? ButtonSize.small : ButtonSize.medium,
+            ),
+          ],
         ),
       ],
     );
+  }
+
+  String _getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inSeconds < 60) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
   }
 
   Widget _buildSummaryCards() {
@@ -541,9 +746,83 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
     );
   }
 
+  Widget _buildNotificationSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.darkCream.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.charcoal.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const NotificationPanel(
+        showOnlyUnread: true,
+        maxItems: 5,
+      ),
+    );
+  }
+
   Widget _buildComplianceSection() {
     return ComplianceMonitor(
       data: sampleData,
+    );
+  }
+
+  Widget _buildAdvancedVisualizationsSection() {
+    final chartData = _convertToChartData();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '📈 Advanced Analytics',
+          style: AppTextStyles.heading3.copyWith(
+            color: AppColors.primaryBlue,
+            fontSize: 20,
+          ),
+        ),
+        const SizedBox(height: 20),
+        
+        // Trend Chart
+        TrendChart(
+          data: chartData,
+          title: 'Water Quality Trends (Last 7 Days)',
+          selectedParameters: const ['pH', 'Turbidity', 'DO'],
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Parameter Comparison and Heatmap in responsive layout
+        ResponsiveRow(
+          children: [
+            Expanded(
+              flex: ResponsiveUtils.isDesktop(context) ? 1 : 2,
+              child: ParameterComparisonChart(
+                data: chartData,
+                title: 'Current Parameter Averages',
+                showThresholds: true,
+              ),
+            ),
+            SizedBox(width: ResponsiveUtils.getSpacing(context, mobile: 0, tablet: 16, desktop: 24)),
+            Expanded(
+              flex: ResponsiveUtils.isDesktop(context) ? 1 : 2,
+              child: ZoneHeatmap(
+                data: chartData,
+                title: 'Zone Quality Distribution',
+                selectedParameter: 'overall',
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

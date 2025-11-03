@@ -24,6 +24,14 @@ class _ReportsPageState extends State<ReportsPage> {
   bool _isGenerating = false;
   bool _isInitialLoading = true;
   List<Map<String, dynamic>> _recentReports = [];
+  
+  // Advanced filtering
+  DateTimeRange? _selectedDateRange;
+  String _selectedZone = 'All Zones';
+  String _reportType = 'Comprehensive';
+  
+  final List<String> _zones = ['All Zones', 'Zone A', 'Zone B', 'Zone C', 'Zone D'];
+  final List<String> _reportTypes = ['Comprehensive', 'Compliance Only', 'Trends Only', 'Summary'];
 
   final List<Map<String, dynamic>> sampleData = [
     {
@@ -319,6 +327,10 @@ class _ReportsPageState extends State<ReportsPage> {
             ),
             const SizedBox(height: 32),
 
+            // Advanced Filters Section
+            _buildAdvancedFilters(),
+            const SizedBox(height: 32),
+
           // Report Cards - Row 1
           Row(
             children: [
@@ -565,5 +577,243 @@ class _ReportsPageState extends State<ReportsPage> {
           )
           .toList(),
     );
+  }
+
+  Widget _buildAdvancedFilters() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.darkCream.withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.charcoal.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                CupertinoIcons.slider_horizontal_3,
+                color: AppColors.accentPink,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Report Configuration',
+                style: AppTextStyles.heading4.copyWith(
+                  color: AppColors.charcoal,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          
+          // Filter controls in row
+          Row(
+            children: [
+              // Date Range Picker
+              Expanded(
+                child: _buildFilterButton(
+                  label: _selectedDateRange == null
+                      ? 'Select Date Range'
+                      : '${_formatDate(_selectedDateRange!.start)} - ${_formatDate(_selectedDateRange!.end)}',
+                  icon: CupertinoIcons.calendar,
+                  onTap: _selectDateRange,
+                ),
+              ),
+              const SizedBox(width: 12),
+              
+              // Zone Dropdown
+              Expanded(
+                child: _buildDropdown(
+                  value: _selectedZone,
+                  items: _zones,
+                  icon: CupertinoIcons.location,
+                  onChanged: (value) {
+                    setState(() => _selectedZone = value!);
+                    ToastNotification.info(context, 'Zone: $value');
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              
+              // Report Type Dropdown
+              Expanded(
+                child: _buildDropdown(
+                  value: _reportType,
+                  items: _reportTypes,
+                  icon: CupertinoIcons.doc_text,
+                  onChanged: (value) {
+                    setState(() => _reportType = value!);
+                    ToastNotification.info(context, 'Type: $value');
+                  },
+                ),
+              ),
+            ],
+          ),
+          
+          // Info text
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.darkVanilla.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  CupertinoIcons.info_circle,
+                  color: AppColors.accentOrange,
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Configure filters to customize your report. All reports include the selected zones and date range.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.mediumGray,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterButton({
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.lightCream,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: AppColors.darkCream.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.accentPink, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.charcoal,
+                  fontSize: 14,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Icon(
+              CupertinoIcons.chevron_down,
+              color: AppColors.mediumGray,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String value,
+    required List<String> items,
+    required IconData icon,
+    required void Function(String?) onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.lightCream,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppColors.darkCream.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.accentPink, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: value,
+                isExpanded: true,
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.charcoal,
+                  fontSize: 14,
+                ),
+                items: items.map((String item) {
+                  return DropdownMenuItem<String>(
+                    value: item,
+                    child: Text(item),
+                  );
+                }).toList(),
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _selectDateRange() async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: _selectedDateRange,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppColors.accentPink,
+              onPrimary: Colors.white,
+              surface: AppColors.white,
+              onSurface: AppColors.charcoal,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    if (picked != null && picked != _selectedDateRange) {
+      setState(() => _selectedDateRange = picked);
+      ToastNotification.success(
+        context,
+        'Date range: ${_formatDate(picked.start)} - ${_formatDate(picked.end)}',
+      );
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.month}/${date.day}/${date.year}';
   }
 }
