@@ -248,12 +248,19 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
       appBar: AppBar(
         backgroundColor: AppColors.white,
         elevation: 0,
-        title: Text(
-          '📊 Dashboard',
-          style: AppTextStyles.heading4.copyWith(
-            color: AppColors.charcoal,
-            fontWeight: FontWeight.w700,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.dashboard_outlined, color: AppColors.primaryBlue, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Dashboard',
+              style: AppTextStyles.heading4.copyWith(
+                color: AppColors.charcoal,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
         actions: [
           ResponsiveIconButton(
@@ -337,8 +344,14 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
             children: [
               Row(
                 children: [
+                  Icon(
+                    Icons.dashboard_outlined,
+                    color: AppColors.primaryBlue,
+                    size: 32,
+                  ),
+                  const SizedBox(width: 12),
                   Text(
-                    '📊 Water Quality Dashboard',
+                    'Water Quality Dashboard',
                     style: AppTextStyles.heading2.copyWith(
                       color: AppColors.charcoal,
                       fontWeight: FontWeight.w800,
@@ -473,34 +486,38 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
             children: [
               AnimatedListItem(
                 index: 0,
-                child: _buildSummaryCard(
-                  '📋 Total Records',
+                child: _buildSummaryCardWithIcon(
+                  'Total Samples',
                   '${sampleData.length}',
-                  AppColors.darkVanilla,
+                  AppColors.primaryBlue,
+                  Icons.water_drop_outlined,
                 ),
               ),
               AnimatedListItem(
                 index: 1,
-                child: _buildSummaryCard(
-                  '✅ Safe',
+                child: _buildSummaryCardWithIcon(
+                  'Safe',
                   '${_countStatus("Safe")}',
                   AppColors.success,
+                  Icons.check_circle_outline,
                 ),
               ),
               AnimatedListItem(
                 index: 2,
-                child: _buildSummaryCard(
-                  '⚠️ Warning',
+                child: _buildSummaryCardWithIcon(
+                  'Warning',
                   '${_countStatus("Warning")}',
                   AppColors.warning,
+                  Icons.warning_amber_outlined,
                 ),
               ),
               AnimatedListItem(
                 index: 3,
-                child: _buildSummaryCard(
-                  '❌ Critical',
+                child: _buildSummaryCardWithIcon(
+                  'Critical',
                   '${_countStatus("Critical")}',
                   AppColors.error,
+                  Icons.error_outline,
                 ),
               ),
             ],
@@ -517,7 +534,7 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
           AnimatedListItem(
             index: 0,
             child: _buildSummaryCard(
-              '📋 Total Records',
+              'Total Records',
               '${sampleData.length}',
               AppColors.darkVanilla,
             ),
@@ -526,7 +543,7 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
           AnimatedListItem(
             index: 1,
             child: _buildSummaryCard(
-              '✅ Safe',
+              'Safe',
               '${_countStatus("Safe")}',
               AppColors.success,
             ),
@@ -535,7 +552,7 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
           AnimatedListItem(
             index: 2,
             child: _buildSummaryCard(
-              '⚠️ Warning',
+              'Warning',
               '${_countStatus("Warning")}',
               AppColors.warning,
             ),
@@ -544,7 +561,7 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
           AnimatedListItem(
             index: 3,
             child: _buildSummaryCard(
-              '❌ Critical',
+              'Critical',
               '${_countStatus("Critical")}',
               AppColors.error,
             ),
@@ -681,6 +698,10 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
   }
 
   Widget _buildSummaryCard(String title, String value, Color color) {
+    return _buildSummaryCardWithIcon(title, value, color, null);
+  }
+
+  Widget _buildSummaryCardWithIcon(String title, String value, Color color, IconData? icon) {
     // Create accessible label
     final semanticLabel = '$title: $value';
     
@@ -696,7 +717,7 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
             color: AppColors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: AppColors.darkCream.withOpacity(0.2),
+              color: color.withOpacity(0.2),
               width: 1,
             ),
             boxShadow: [
@@ -712,12 +733,26 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: AppTextStyles.buttonSmall.copyWith(
-                    color: AppColors.mediumGray,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: AppTextStyles.buttonSmall.copyWith(
+                          color: AppColors.mediumGray,
+                        ),
+                      ),
+                    ),
+                    if (icon != null)
+                      Icon(
+                        icon,
+                        color: color.withOpacity(0.6),
+                        size: 20,
+                      ),
+                  ],
                 ),
+                const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -782,12 +817,22 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '📈 Advanced Analytics',
-          style: AppTextStyles.heading3.copyWith(
-            color: AppColors.primaryBlue,
-            fontSize: 20,
-          ),
+        Row(
+          children: [
+            Icon(
+              Icons.analytics_outlined,
+              color: AppColors.primaryBlue,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Advanced Analytics',
+              style: AppTextStyles.heading3.copyWith(
+                color: AppColors.primaryBlue,
+                fontSize: 20,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 20),
         

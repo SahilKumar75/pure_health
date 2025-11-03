@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Background colors - Claude.AI exact style
-  static const Color darkBg = Color(0xFFFAFAFA);      // Light off-white
-  static const Color darkBg2 = Color(0xFFFFFFFF);     // Pure white
-  static const Color darkBg3 = Color(0xFFF0F0F0);     // Very light gray
+  // Background colors - Claude.AI cream/beige professional palette
+  static const Color darkBg = Color(0xFFF5F3F0);      // Warm cream (main background)
+  static const Color darkBg2 = Color(0xFFFAF9F7);     // Light cream-white (cards/panels)
+  static const Color darkBg3 = Color(0xFFEDE9E4);     // Darker cream-beige (hover/secondary)
   
   // Text colors
   static const Color lightText = Color(0xFF1a1a1a);   // Dark text
@@ -40,7 +40,7 @@ class AppColors {
   static const Color chartIndigo = Color(0xFF3F51B5);
   
   // Borders
-  static const Color borderLight = Color(0xFFe5e5e5);
+  static const Color borderLight = Color(0xFFE0DDD8); // Warm cream border
   
   // Deprecated (kept for compatibility)
   static const Color white = Color(0xFFFFFFFF);

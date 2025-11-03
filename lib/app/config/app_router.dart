@@ -34,7 +34,7 @@ CustomTransitionPage<T> smoothPage<T>({required Widget child}) =>
 
 /// Navigation configuration
 class AppRouter {
-  /// Navigation items for sidebar
+  /// Navigation items for sidebar (Profile and Settings at bottom)
   static const List<Map<String, dynamic>> navigationItems = [
     {
       'icon': 'home',
@@ -55,28 +55,28 @@ class AppRouter {
       'route': '/history',
     },
     {
-      'icon': 'settings',
-      'label': 'Settings',
-      'index': 3,
-      'route': '/settings',
-    },
-    {
       'icon': 'chat',
       'label': 'Chat',
-      'index': 4,
+      'index': 3,
       'route': '/chat',
     },
     {
       'icon': 'reports',
       'label': 'Reports',
-      'index': 5,
+      'index': 4,
       'route': '/reports',
     },
     {
       'icon': 'profile',
       'label': 'Profile',
-      'index': 6,
+      'index': 5,
       'route': '/profile',
+    },
+    {
+      'icon': 'settings',
+      'label': 'Settings',
+      'index': 6,
+      'route': '/settings',
     },
   ];
 
@@ -114,8 +114,14 @@ class AppRouter {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Color(0xFFEF4444),
+            ),
+            const SizedBox(height: 16),
             const Text(
-              '❌ Page not found',
+              'Page not found',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),

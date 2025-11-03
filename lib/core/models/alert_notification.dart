@@ -100,22 +100,22 @@ extension AlertTypeExtension on AlertType {
     }
   }
 
-  String get icon {
+  String get iconName {
     switch (this) {
       case AlertType.phLevel:
-        return '⚗️';
+        return 'science';
       case AlertType.turbidity:
-        return '💧';
+        return 'water_drop';
       case AlertType.dissolvedOxygen:
-        return '🫧';
+        return 'air';
       case AlertType.temperature:
-        return '🌡️';
+        return 'thermostat';
       case AlertType.conductivity:
-        return '⚡';
+        return 'electric_bolt';
       case AlertType.system:
-        return '⚙️';
+        return 'settings';
       case AlertType.compliance:
-        return '✓';
+        return 'check_circle';
     }
   }
 }

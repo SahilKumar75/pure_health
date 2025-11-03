@@ -193,12 +193,18 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            Text(
-              '📋 Water Quality History',
-              style: AppTextStyles.heading2.copyWith(
-                color: AppColors.charcoal,
-                fontWeight: FontWeight.w800,
-              ),
+            Row(
+              children: [
+                Icon(Icons.history, color: AppColors.primaryBlue, size: 32),
+                const SizedBox(width: 12),
+                Text(
+                  'Water Quality History',
+                  style: AppTextStyles.heading2.copyWith(
+                    color: AppColors.charcoal,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(

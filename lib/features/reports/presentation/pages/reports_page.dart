@@ -311,12 +311,18 @@ class _ReportsPageState extends State<ReportsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            Text(
-              '📊 Reports & Exports',
-              style: AppTextStyles.heading2.copyWith(
-                color: AppColors.charcoal,
-                fontWeight: FontWeight.w800,
-              ),
+            Row(
+              children: [
+                Icon(Icons.assessment_outlined, color: AppColors.primaryBlue, size: 32),
+                const SizedBox(width: 12),
+                Text(
+                  'Reports & Exports',
+                  style: AppTextStyles.heading2.copyWith(
+                    color: AppColors.charcoal,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(
@@ -335,7 +341,7 @@ class _ReportsPageState extends State<ReportsPage> {
           Row(
             children: [
               _buildReportCard(
-                icon: '📄',
+                icon: 'pdf',
                 title: 'PDF Report',
                 description: 'Professional PDF with charts',
                 onTap: _generateAndPreviewPDF,
@@ -344,8 +350,8 @@ class _ReportsPageState extends State<ReportsPage> {
               ),
               const SizedBox(width: 16),
               _buildReportCard(
-                icon: '📋',
-                title: 'CSV Export',
+                icon: 'excel',
+                title: 'Excel Export',
                 description: 'Raw data in CSV format',
                 onTap: _downloadCSV,
                 color: AppColors.success.withOpacity(0.1),
@@ -405,6 +411,24 @@ class _ReportsPageState extends State<ReportsPage> {
     required Color color,
     required Color buttonColor,
   }) {
+    // Map string to IconData
+    IconData getIcon() {
+      switch(icon) {
+        case '📊':
+        case 'chart':
+          return Icons.insert_chart_outlined;
+        case '✓':
+        case 'check':
+          return Icons.check_circle_outline;
+        case 'pdf':
+          return Icons.picture_as_pdf_outlined;
+        case 'excel':
+          return Icons.table_chart_outlined;
+        default:
+          return Icons.description_outlined;
+      }
+    }
+    
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -432,9 +456,10 @@ class _ReportsPageState extends State<ReportsPage> {
                 color: color,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                icon,
-                style: const TextStyle(fontSize: 32),
+              child: Icon(
+                getIcon(),
+                size: 32,
+                color: buttonColor,
               ),
             ),
             const SizedBox(height: 16),

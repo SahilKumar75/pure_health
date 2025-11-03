@@ -159,9 +159,10 @@ class NotificationPanel extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(
-                child: Text(
-                  notification.type.icon,
-                  style: const TextStyle(fontSize: 20),
+                child: Icon(
+                  _getIconForType(notification.type),
+                  size: 20,
+                  color: severityColor,
                 ),
               ),
             ),
@@ -307,7 +308,10 @@ class NotificationPanel extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Text(notification.type.icon),
+            Icon(
+              _getIconForType(notification.type),
+              color: _getSeverityColor(notification.severity),
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -412,5 +416,24 @@ class NotificationPanel extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  IconData _getIconForType(AlertType type) {
+    switch (type) {
+      case AlertType.phLevel:
+        return Icons.science_outlined;
+      case AlertType.turbidity:
+        return Icons.water_drop_outlined;
+      case AlertType.dissolvedOxygen:
+        return Icons.air;
+      case AlertType.temperature:
+        return Icons.thermostat_outlined;
+      case AlertType.conductivity:
+        return Icons.electric_bolt_outlined;
+      case AlertType.system:
+        return Icons.settings_outlined;
+      case AlertType.compliance:
+        return Icons.check_circle_outline;
+    }
   }
 }

@@ -64,21 +64,21 @@ class _CustomSidebarState extends State<CustomSidebar> {
                 borderRadius: BorderRadius.circular(isExpanded ? 16 : 32),
               ),
               onTap: () => _handleNavigation(index),
-              hoverColor: AppColors.accentPink.withOpacity(0.08),
-              splashColor: AppColors.accentPink.withOpacity(0.2),
+              hoverColor: AppColors.primaryBlue.withOpacity(0.08),
+              splashColor: AppColors.primaryBlue.withOpacity(0.2),
               child: Container(
                 padding: EdgeInsets.all(isExpanded ? 12.0 : 10.0),
                 decoration: isSelected
                     ? BoxDecoration(
-                        color: AppColors.accentPink.withOpacity(0.15),
+                        color: AppColors.primaryBlue.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(isExpanded ? 16 : 32),
                         border: Border.all(
-                          color: AppColors.accentPink.withOpacity(0.3),
+                          color: AppColors.primaryBlue.withOpacity(0.3),
                           width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.accentPink.withOpacity(0.1),
+                            color: AppColors.primaryBlue.withOpacity(0.1),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -92,7 +92,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
                           Icon(
                             icon,
                             color: isSelected
-                                ? AppColors.accentPink
+                                ? AppColors.primaryBlue
                                 : AppColors.mediumText,
                             size: 22,
                           ),
@@ -102,7 +102,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
                               label,
                               style: AppTextStyles.button.copyWith(
                                 color: isSelected
-                                    ? AppColors.accentPink
+                                    ? AppColors.primaryBlue
                                     : AppColors.mediumText,
                                 fontWeight: isSelected
                                     ? FontWeight.w600
@@ -142,7 +142,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
                         child: Icon(
                           icon,
                           color: isSelected
-                              ? AppColors.accentPink
+                              ? AppColors.primaryBlue
                               : AppColors.mediumText,
                           size: 22,
                         ),
@@ -227,7 +227,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
                             children: [
                               Icon(
                                 CupertinoIcons.sidebar_left,
-                                color: AppColors.accentPink,
+                                color: AppColors.primaryBlue,
                                 size: 18,
                               ),
                               const SizedBox(width: 12),
@@ -247,7 +247,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
                         : Center(
                             child: Icon(
                               CupertinoIcons.bars,
-                              color: AppColors.accentPink,
+                              color: AppColors.primaryBlue,
                               size: 18,
                             ),
                           ),
@@ -257,39 +257,90 @@ class _CustomSidebarState extends State<CustomSidebar> {
             ),
             const SizedBox(height: 16),
 
-            // Navigation items
+            // Main navigation items (top section)
             Expanded(
-              child: ListView.builder(
-                itemCount: AppRouter.navigationItems.length,
-                itemBuilder: (context, index) {
-                  final item = AppRouter.navigationItems[index];
-                  final iconMap = {
-                    'home': CupertinoIcons.home,
-                    'dashboard': CupertinoIcons.chart_bar_fill,
-                    'history': CupertinoIcons.time,
-                    'settings': CupertinoIcons.settings,
-                    'chat': CupertinoIcons.chat_bubble_2,
-                    'reports': CupertinoIcons.doc_fill,
-                    'profile': CupertinoIcons.person_circle,
-                  };
+              child: Column(
+                children: [
+                  // Main navigation items (Home to Reports)
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: AppRouter.navigationItems.length - 2, // Exclude Profile and Settings
+                      itemBuilder: (context, index) {
+                        final item = AppRouter.navigationItems[index];
+                        final iconMap = {
+                          'home': CupertinoIcons.home,
+                          'dashboard': CupertinoIcons.chart_bar_fill,
+                          'history': CupertinoIcons.time,
+                          'settings': CupertinoIcons.settings,
+                          'chat': CupertinoIcons.chat_bubble_2,
+                          'reports': CupertinoIcons.doc_fill,
+                          'profile': CupertinoIcons.person_circle,
+                        };
 
-                  final shortcutMap = {
-                    0: '⌘1',
-                    1: '⌘2',
-                    2: '⌘3',
-                    3: '⌘4',
-                    4: '⌘5',
-                    5: '⌘6',
-                    6: '⌘7',
-                  };
+                        final shortcutMap = {
+                          0: '⌘1',
+                          1: '⌘2',
+                          2: '⌘3',
+                          3: '⌘4',
+                          4: '⌘5',
+                          5: '⌘6',
+                          6: '⌘7',
+                        };
 
-                  return _buildNavItem(
-                    icon: iconMap[item['icon']] ?? CupertinoIcons.home,
-                    label: item['label'] as String,
-                    index: item['index'] as int,
-                    shortcut: shortcutMap[item['index'] as int],
-                  );
-                },
+                        return _buildNavItem(
+                          icon: iconMap[item['icon']] ?? CupertinoIcons.home,
+                          label: item['label'] as String,
+                          index: item['index'] as int,
+                          shortcut: shortcutMap[item['index'] as int],
+                        );
+                      },
+                    ),
+                  ),
+                  
+                  // Spacer divider
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isExpanded ? 16.0 : 8.0,
+                      vertical: 8.0,
+                    ),
+                    child: Container(
+                      height: 1,
+                      color: AppColors.borderLight,
+                    ),
+                  ),
+                  
+                  // Bottom items (Profile and Settings)
+                  ...AppRouter.navigationItems
+                      .skip(AppRouter.navigationItems.length - 2) // Last 2 items
+                      .map((item) {
+                    final iconMap = {
+                      'home': CupertinoIcons.home,
+                      'dashboard': CupertinoIcons.chart_bar_fill,
+                      'history': CupertinoIcons.time,
+                      'settings': CupertinoIcons.settings,
+                      'chat': CupertinoIcons.chat_bubble_2,
+                      'reports': CupertinoIcons.doc_fill,
+                      'profile': CupertinoIcons.person_circle,
+                    };
+
+                    final shortcutMap = {
+                      0: '⌘1',
+                      1: '⌘2',
+                      2: '⌘3',
+                      3: '⌘4',
+                      4: '⌘5',
+                      5: '⌘6',
+                      6: '⌘7',
+                    };
+
+                    return _buildNavItem(
+                      icon: iconMap[item['icon']] ?? CupertinoIcons.home,
+                      label: item['label'] as String,
+                      index: item['index'] as int,
+                      shortcut: shortcutMap[item['index'] as int],
+                    );
+                  }).toList(),
+                ],
               ),
             ),
           ],

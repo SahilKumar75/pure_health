@@ -31,7 +31,7 @@ class WaterQualityCharts {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '📊 pH Levels Trend',
+            'pH Levels Trend',
             style: AppTextStyles.heading4.copyWith(
               color: AppColors.charcoal,
               fontWeight: FontWeight.w700,
@@ -178,7 +178,7 @@ class WaterQualityCharts {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '🌊 Turbidity by Location',
+            'Turbidity by Location',
             style: AppTextStyles.heading4.copyWith(
               color: AppColors.charcoal,
               fontWeight: FontWeight.w700,
@@ -303,7 +303,7 @@ class WaterQualityCharts {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '📈 Water Quality Status Distribution',
+            'Water Quality Status Distribution',
             style: AppTextStyles.heading4.copyWith(
               color: AppColors.charcoal,
               fontWeight: FontWeight.w700,
@@ -388,7 +388,7 @@ class WaterQualityCharts {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '📍 Location Status Overview',
+            'Location Status Overview',
             style: AppTextStyles.heading4.copyWith(
               color: AppColors.charcoal,
               fontWeight: FontWeight.w700,
@@ -405,10 +405,10 @@ class WaterQualityCharts {
                     ? AppColors.warning
                     : AppColors.error;
             final statusIcon = status == 'Safe'
-                ? '✅'
+                ? 'Safe'
                 : status == 'Warning'
-                    ? '⚠️'
-                    : '❌';
+                    ? 'Warning'
+                    : 'Critical';
 
             return Padding(
               padding: EdgeInsets.only(
@@ -503,7 +503,7 @@ class WaterQualityCharts {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '🌡️ Temperature & Conductivity',
+            'Temperature & Conductivity',
             style: AppTextStyles.heading4.copyWith(
               color: AppColors.charcoal,
               fontWeight: FontWeight.w700,
