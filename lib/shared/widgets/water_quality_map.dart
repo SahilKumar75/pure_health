@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/models/monitoring_location.dart';
 import '../../core/constants/color_constants.dart';
+import '../../core/constants/maharashtra_border.dart';
 import '../../core/theme/text_styles.dart';
 
 class WaterQualityMap extends StatefulWidget {
@@ -101,6 +102,17 @@ class _WaterQualityMapState extends State<WaterQualityMap> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.purehealth.app',
                 maxZoom: 19,
+              ),
+              // Maharashtra border polygon
+              PolygonLayer(
+                polygons: [
+                  Polygon(
+                    points: MaharashtraBorder.borderCoordinates,
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderColor: AppColors.primaryBlue,
+                    borderStrokeWidth: 2.5,
+                  ),
+                ],
               ),
               MarkerLayer(
                 markers: widget.locations.map((location) {

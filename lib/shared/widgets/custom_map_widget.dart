@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../../core/constants/color_constants.dart';
+import '../../core/constants/maharashtra_border.dart';
 
 class CustomMapWidget extends StatefulWidget {
   final double zoom;
@@ -137,6 +138,17 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
             TileLayer(
               urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
               subdomains: const ['a', 'b', 'c'],
+            ),
+            // Maharashtra border polygon
+            PolygonLayer(
+              polygons: [
+                Polygon(
+                  points: MaharashtraBorder.borderCoordinates,
+                  color: AppColors.primaryBlue.withOpacity(0.1),
+                  borderColor: AppColors.primaryBlue,
+                  borderStrokeWidth: 2.5,
+                ),
+              ],
             ),
             MarkerLayer(markers: allMarkers),
           ],

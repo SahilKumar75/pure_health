@@ -29,7 +29,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
   late bool _collapsed;
   bool _isMinimized = false;
   final List<_ChatMessage> _messages = [
-    _ChatMessage(text: "Hi! How can I help you today?", isUser: false),
+    _ChatMessage(text: "Upload your water quality data to get comprehensive AI analysis with predictions, risk assessment, and recommendations.", isUser: false),
   ];
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
@@ -86,7 +86,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
             Row(
               children: [
                 Text(
-                  'Chat',
+                  'AI Analysis',
                   style: AppTextStyles.heading3.copyWith(
                     color: AppColors.charcoal,
                   ),
@@ -96,7 +96,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                   padding: EdgeInsets.zero,
                   minSize: 28,
                   onPressed: () {
-                    GoRouter.of(context).go('/chat');
+                    GoRouter.of(context).go('/ai-analysis');
                   },
                   child: Container(
                     padding: const EdgeInsets.all(6),
@@ -296,7 +296,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                   child: CupertinoTextField(
                     controller: _controller,
                     focusNode: _focusNode,
-                    placeholder: "Message Assistant...",
+                    placeholder: "Ask about water quality analysis...",
                     onSubmitted: (_) => _sendMessage(),
                     onChanged: (_) => setState(() {}),
                     padding: const EdgeInsets.symmetric(
@@ -385,7 +385,7 @@ class _VerticalFloatingCardState extends State<VerticalFloatingCard> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                CupertinoIcons.chat_bubble_2_fill,
+                CupertinoIcons.sparkles,
                 color: AppColors.darkVanilla,
                 size: 22,
               ),
