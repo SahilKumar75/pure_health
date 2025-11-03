@@ -5,9 +5,8 @@ import 'package:pure_health/features/home/presentation/pages/home_page.dart';
 import 'package:pure_health/features/profile/presentation/pages/profile_page.dart';
 import 'package:pure_health/features/history/history_report_page.dart';
 import 'package:pure_health/features/settings/presentation/pages/settings_page.dart';
-import 'package:pure_health/features/chat/presentation/pages/chat_page.dart';
+import 'package:pure_health/features/ai_analysis/presentation/pages/ai_analysis_page.dart';
 import 'package:pure_health/features/dashboard/presentation/pages/dashboard_page.dart';
-import 'package:pure_health/features/reports/presentation/pages/reports_page.dart';
 
 /// Custom smooth page transition with fade + slide effect
 CustomTransitionPage<T> smoothPage<T>({required Widget child}) =>
@@ -55,27 +54,21 @@ class AppRouter {
       'route': '/history',
     },
     {
-      'icon': 'chat',
-      'label': 'Chat',
+      'icon': 'ai',
+      'label': 'AI Analysis',
       'index': 3,
-      'route': '/chat',
-    },
-    {
-      'icon': 'reports',
-      'label': 'Reports',
-      'index': 4,
-      'route': '/reports',
+      'route': '/ai-analysis',
     },
     {
       'icon': 'profile',
       'label': 'Profile',
-      'index': 5,
+      'index': 4,
       'route': '/profile',
     },
     {
       'icon': 'settings',
       'label': 'Settings',
-      'index': 6,
+      'index': 5,
       'route': '/settings',
     },
   ];
@@ -158,20 +151,12 @@ class AppRouter {
                 smoothPage(child: const DashboardPage()),
           ),
 
-          // Chat
+          // AI Analysis
           GoRoute(
-            path: '/chat',
-            name: 'chat',
+            path: '/ai-analysis',
+            name: 'ai-analysis',
             pageBuilder: (context, state) =>
-                smoothPage(child: const ChatPage()),
-          ),
-
-          // Reports
-          GoRoute(
-            path: '/reports',
-            name: 'reports',
-            pageBuilder: (context, state) =>
-                smoothPage(child: const ReportsPage()),
+                smoothPage(child: const AIAnalysisPage()),
           ),
 
           // History

@@ -261,7 +261,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
             Expanded(
               child: Column(
                 children: [
-                  // Main navigation items (Home to Reports)
+                  // Main navigation items
                   Expanded(
                     child: ListView.builder(
                       itemCount: AppRouter.navigationItems.length - 2, // Exclude Profile and Settings
@@ -272,8 +272,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
                           'dashboard': CupertinoIcons.chart_bar_fill,
                           'history': CupertinoIcons.time,
                           'settings': CupertinoIcons.settings,
-                          'chat': CupertinoIcons.chat_bubble_2,
-                          'reports': CupertinoIcons.doc_fill,
+                          'ai': CupertinoIcons.sparkles,
                           'profile': CupertinoIcons.person_circle,
                         };
 
@@ -318,8 +317,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
                       'dashboard': CupertinoIcons.chart_bar_fill,
                       'history': CupertinoIcons.time,
                       'settings': CupertinoIcons.settings,
-                      'chat': CupertinoIcons.chat_bubble_2,
-                      'reports': CupertinoIcons.doc_fill,
+                      'ai': CupertinoIcons.sparkles,
                       'profile': CupertinoIcons.person_circle,
                     };
 
