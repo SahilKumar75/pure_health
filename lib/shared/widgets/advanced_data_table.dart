@@ -195,17 +195,22 @@ class _AdvancedDataTableState extends State<AdvancedDataTable> {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: DataTable(
-        headingRowColor: MaterialStateProperty.all(
-          GovernmentTheme.governmentWhite,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minWidth: MediaQuery.of(context).size.width - 100,
         ),
-        dataRowColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.hovered)) {
-            return GovernmentTheme.governmentBlue.withOpacity(0.05);
-          }
-          return Colors.white;
-        }),
-        columns: widget.columns.map((col) {
+        child: DataTable(
+          columnSpacing: 24,
+          headingRowColor: MaterialStateProperty.all(
+            GovernmentTheme.governmentWhite,
+          ),
+          dataRowColor: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.hovered)) {
+              return GovernmentTheme.governmentBlue.withOpacity(0.05);
+            }
+            return Colors.white;
+          }),
+          columns: widget.columns.map((col) {
           return DataColumn(
             label: Row(
               children: [
@@ -257,6 +262,7 @@ class _AdvancedDataTableState extends State<AdvancedDataTable> {
             }).toList(),
           );
         }).toList(),
+        ),
       ),
     );
   }

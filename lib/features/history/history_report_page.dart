@@ -10,6 +10,7 @@ import 'package:pure_health/shared/widgets/empty_state_widget.dart';
 import 'package:pure_health/shared/widgets/toast_notification.dart';
 import 'package:pure_health/shared/widgets/refresh_widgets.dart';
 import 'package:pure_health/shared/widgets/advanced_data_table.dart';
+import 'package:pure_health/core/data/maharashtra_water_data.dart';
 
 class HistoryReportPage extends StatefulWidget {
   const HistoryReportPage({super.key});
@@ -42,41 +43,40 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
     await Future.delayed(const Duration(milliseconds: 900));
     
     if (mounted) {
+      // Load real Maharashtra data
+      final allSamples = MaharashtraWaterQualityData.generateAllSamples(samplesPerStation: 5);
+      
+      // Convert to history format
+      final historyRecords = allSamples.map((sample) {
+        String action = 'Routine monitoring';
+        if (sample['status'] == 'Warning') {
+          action = 'Increased monitoring';
+        } else if (sample['status'] == 'Critical') {
+          action = 'Emergency response';
+        }
+        
+        return {
+          'date': DateTime.parse(sample['timestamp'] as String).toString().split(' ')[0],
+          'location': sample['stationName'] as String,
+          'pH': sample['pH'],
+          'turbidity': sample['turbidity'],
+          'dissolvedOxygen': sample['dissolvedOxygen'],
+          'temperature': sample['temperature'],
+          'conductivity': sample['conductivity'],
+          'status': sample['status'],
+          'action': action,
+          'district': sample['district'],
+          'waterBody': sample['waterBody'],
+        };
+      }).toList();
+      
+      // Sort by date descending
+      historyRecords.sort((a, b) => 
+        (b['date'] as String).compareTo(a['date'] as String)
+      );
+      
       setState(() {
-        _historyData = [
-          {
-            'date': '2025-11-02',
-            'location': 'Zone A',
-            'pH': 7.2,
-            'turbidity': 2.1,
-            'status': 'Safe',
-            'action': 'Routine monitoring'
-          },
-          {
-            'date': '2025-11-01',
-            'location': 'Zone B',
-            'pH': 6.8,
-            'turbidity': 3.5,
-            'status': 'Warning',
-            'action': 'Increased monitoring'
-          },
-          {
-            'date': '2025-10-31',
-            'location': 'Zone C',
-            'pH': 5.5,
-            'turbidity': 8.2,
-            'status': 'Critical',
-            'action': 'Emergency response'
-          },
-          {
-            'date': '2025-10-30',
-            'location': 'Zone A',
-            'pH': 7.1,
-            'turbidity': 2.0,
-            'status': 'Safe',
-            'action': 'Routine monitoring'
-          },
-        ];
+        _historyData = historyRecords;
         _filteredData = List.from(_historyData);
         _isLoading = false;
       });

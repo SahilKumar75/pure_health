@@ -21,10 +21,10 @@ import 'package:pure_health/shared/widgets/page_transitions.dart';
 import 'package:pure_health/shared/widgets/advanced_data_table.dart';
 import 'package:pure_health/shared/widgets/compliance_monitor.dart';
 import 'package:pure_health/shared/widgets/notification_bell.dart';
-import 'package:pure_health/shared/widgets/notification_panel.dart';
 import 'package:pure_health/shared/widgets/trend_chart.dart';
 import 'package:pure_health/shared/widgets/parameter_comparison_chart.dart';
 import 'package:pure_health/shared/widgets/zone_heatmap.dart';
+import 'package:pure_health/core/data/maharashtra_water_data.dart';
 import 'package:intl/intl.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -43,59 +43,41 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
   Timer? _refreshTimer;
   bool _showNewDataIndicator = false;
 
-  // Sample data - Replace with real backend data
-  List<Map<String, dynamic>> sampleData = [
-    {
-      'pH': 7.2,
-      'turbidity': 2.1,
-      'status': 'Safe',
-      'location': 'Zone A',
-      'temperature': 25.0,
-      'conductivity': 500,
-      'timestamp': '2025-11-02 08:00'
-    },
-    {
-      'pH': 6.8,
-      'turbidity': 3.5,
-      'status': 'Warning',
-      'location': 'Zone B',
-      'temperature': 22.0,
-      'conductivity': 480,
-      'timestamp': '2025-11-02 09:00'
-    },
-    {
-      'pH': 5.5,
-      'turbidity': 8.2,
-      'status': 'Critical',
-      'location': 'Zone C',
-      'temperature': 28.0,
-      'conductivity': 620,
-      'timestamp': '2025-11-02 10:00'
-    },
-    {
-      'pH': 7.1,
-      'turbidity': 2.0,
-      'status': 'Safe',
-      'location': 'Zone A',
-      'temperature': 24.5,
-      'conductivity': 510,
-      'timestamp': '2025-11-02 11:00'
-    },
-    {
-      'pH': 7.3,
-      'turbidity': 2.3,
-      'status': 'Safe',
-      'location': 'Zone D',
-      'temperature': 25.2,
-      'conductivity': 505,
-      'timestamp': '2025-11-02 12:00'
-    },
-  ];
+  // Real Maharashtra water quality data
+  List<Map<String, dynamic>> sampleData = [];
+
+  // Load real Maharashtra data
+  void _loadMaharashtraData() {
+    final stations = MaharashtraWaterData.getAllStations();
+    final allSamples = <Map<String, dynamic>>[];
+    
+    // Get recent samples from top 5 stations
+    final topStations = stations.take(5).toList();
+    for (final station in topStations) {
+      final samples = MaharashtraWaterQualityData.generateSamplesForStation(
+        station,
+        sampleCount: 3,
+        startDate: DateTime.now().subtract(const Duration(days: 2)),
+      );
+      allSamples.addAll(samples);
+    }
+    
+    // Sort by timestamp descending
+    allSamples.sort((a, b) => 
+      DateTime.parse(b['timestamp'] as String)
+          .compareTo(DateTime.parse(a['timestamp'] as String))
+    );
+    
+    setState(() {
+      sampleData = allSamples.take(20).toList();
+    });
+  }
 
   @override
   void initState() {
     super.initState();
     _lastUpdated = DateTime.now();
+    _loadMaharashtraData(); // Load real Maharashtra data first
     _loadData();
     _startAutoRefresh();
   }
@@ -317,11 +299,7 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
             if (!context.isMobile) const SizedBox(height: 32),
             _buildSummaryCards(),
             SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
-            _buildNotificationSection(),
-            SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
             _buildChartsSection(),
-            SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
-            _buildComplianceSection(),
             SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
             _buildAdvancedVisualizationsSection(),
             SizedBox(height: ResponsiveUtils.getSpacing(context, mobile: 20, tablet: 28, desktop: 32)),
@@ -582,19 +560,47 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
           ),
         ),
         const SizedBox(height: 16),
-        WaterQualityCharts.buildPHTrendChart(sampleData),
+        
+        // pH Trend and Turbidity side by side (pH wider)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 3,
+              child: WaterQualityCharts.buildPHTrendChart(sampleData),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 2,
+              child: WaterQualityCharts.buildTurbidityChart(sampleData),
+            ),
+          ],
+        ),
         const SizedBox(height: 24),
-        WaterQualityCharts.buildTurbidityChart(sampleData),
-        const SizedBox(height: 24),
+        
+        // Status Pie Chart (full width)
         WaterQualityCharts.buildStatusPieChart({
           'Safe': _countStatus('Safe'),
           'Warning': _countStatus('Warning'),
           'Critical': _countStatus('Critical'),
         }),
         const SizedBox(height: 24),
-        WaterQualityCharts.buildTemperatureConductivityChart(sampleData),
-        const SizedBox(height: 24),
-        WaterQualityCharts.buildLocationStatus(sampleData),
+        
+        // Location Status and Compliance side by side (matching heights)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 3,
+              child: WaterQualityCharts.buildLocationStatus(sampleData),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 2,
+              child: _buildComplianceSection(),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -781,30 +787,6 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
     );
   }
 
-  Widget _buildNotificationSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.darkCream.withOpacity(0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.charcoal.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: const NotificationPanel(
-        showOnlyUnread: true,
-        maxItems: 5,
-      ),
-    );
-  }
-
   Widget _buildComplianceSection() {
     return ComplianceMonitor(
       data: sampleData,
@@ -861,7 +843,7 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
               flex: ResponsiveUtils.isDesktop(context) ? 1 : 2,
               child: ZoneHeatmap(
                 data: chartData,
-                title: 'Zone Quality Distribution',
+                title: 'Location Quality Distribution',
                 selectedParameter: 'overall',
               ),
             ),

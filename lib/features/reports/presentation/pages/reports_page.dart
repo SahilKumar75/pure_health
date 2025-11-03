@@ -10,6 +10,7 @@ import 'package:pure_health/shared/widgets/empty_state_widget.dart';
 import 'package:pure_health/shared/widgets/toast_notification.dart';
 import 'package:pure_health/shared/widgets/enhanced_loading_widget.dart';
 import 'package:pure_health/shared/widgets/refresh_widgets.dart';
+import 'package:pure_health/core/data/maharashtra_water_data.dart';
 import 'package:printing/printing.dart';
 
 class ReportsPage extends StatefulWidget {
@@ -27,44 +28,24 @@ class _ReportsPageState extends State<ReportsPage> {
   
   // Advanced filtering
   DateTimeRange? _selectedDateRange;
-  String _selectedZone = 'All Zones';
+  String _selectedLocation = 'All Locations';
   String _reportType = 'Comprehensive';
   
-  final List<String> _zones = ['All Zones', 'Zone A', 'Zone B', 'Zone C', 'Zone D'];
+  // Get real Maharashtra districts
+  List<String> get _locations => ['All Locations', ...MaharashtraWaterData.getDistricts()];
   final List<String> _reportTypes = ['Comprehensive', 'Compliance Only', 'Trends Only', 'Summary'];
 
-  final List<Map<String, dynamic>> sampleData = [
-    {
-      'location': 'Zone A',
-      'pH': 7.2,
-      'turbidity': 2.1,
-      'dissolved_oxygen': 8.5,
-      'temperature': 25.0,
-      'conductivity': 500,
-      'status': 'Safe',
-      'timestamp': '2025-11-02 08:00'
-    },
-    {
-      'location': 'Zone B',
-      'pH': 6.8,
-      'turbidity': 3.5,
-      'dissolved_oxygen': 7.2,
-      'temperature': 22.0,
-      'conductivity': 480,
-      'status': 'Warning',
-      'timestamp': '2025-11-02 09:00'
-    },
-    {
-      'location': 'Zone C',
-      'pH': 5.5,
-      'turbidity': 8.2,
-      'dissolved_oxygen': 4.1,
-      'temperature': 28.0,
-      'conductivity': 620,
-      'status': 'Critical',
-      'timestamp': '2025-11-02 10:00'
-    },
-  ];
+  // Real Maharashtra water quality data
+  List<Map<String, dynamic>> get sampleData {
+    final allSamples = MaharashtraWaterQualityData.generateAllSamples(samplesPerStation: 2);
+    
+    // Filter by selected location
+    if (_selectedLocation != 'All Locations') {
+      return allSamples.where((s) => s['district'] == _selectedLocation).toList();
+    }
+    
+    return allSamples.take(50).toList();
+  }
 
   @override
   void initState() {
@@ -659,15 +640,15 @@ class _ReportsPageState extends State<ReportsPage> {
               ),
               const SizedBox(width: 12),
               
-              // Zone Dropdown
+              // Location Dropdown (Maharashtra Districts)
               Expanded(
                 child: _buildDropdown(
-                  value: _selectedZone,
-                  items: _zones,
+                  value: _selectedLocation,
+                  items: _locations,
                   icon: CupertinoIcons.location,
                   onChanged: (value) {
-                    setState(() => _selectedZone = value!);
-                    ToastNotification.info(context, 'Zone: $value');
+                    setState(() => _selectedLocation = value!);
+                    ToastNotification.info(context, 'Location: $value');
                   },
                 ),
               ),
@@ -706,7 +687,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Configure filters to customize your report. All reports include the selected zones and date range.',
+                    'Configure filters to customize your report. All reports include the selected locations and date range.',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.mediumGray,
                       fontSize: 12,

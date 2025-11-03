@@ -229,14 +229,20 @@ class WaterQualityCharts {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 40,
+                      reservedSize: 60,
                       getTitlesWidget: (value, meta) {
+                        final locationName = _getLocationName(value.toInt());
                         return Padding(
                           padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            _getLocationName(value.toInt()),
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.charcoal,
+                          child: Transform.rotate(
+                            angle: -0.5,
+                            child: Text(
+                              locationName,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.charcoal,
+                                fontSize: 10,
+                              ),
+                              textAlign: TextAlign.right,
                             ),
                           ),
                         );
@@ -301,6 +307,7 @@ class WaterQualityCharts {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             'Water Quality Status Distribution',
@@ -322,15 +329,18 @@ class WaterQualityCharts {
               Expanded(
                 flex: 2,
                 child: SizedBox(
-                  height: 250,
-                  child: PieChart(
-                    PieChartData(
-                      sections: _generatePieSections(statusCounts),
-                      centerSpaceRadius: 50,
-                      sectionsSpace: 2,
-                      pieTouchData: PieTouchData(
-                        enabled: true,
-                        touchCallback: (FlTouchEvent event, pieTouchResponse) {},
+                  height: 220,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: PieChart(
+                      PieChartData(
+                        sections: _generatePieSections(statusCounts),
+                        centerSpaceRadius: 40,
+                        sectionsSpace: 2,
+                        pieTouchData: PieTouchData(
+                          enabled: true,
+                          touchCallback: (FlTouchEvent event, pieTouchResponse) {},
+                        ),
                       ),
                     ),
                   ),
@@ -368,6 +378,7 @@ class WaterQualityCharts {
     }
 
     return Container(
+      height: 480,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -395,6 +406,10 @@ class WaterQualityCharts {
             ),
           ),
           const SizedBox(height: 16),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
           ...locations.asMap().entries.map((entry) {
             final index = entry.key;
             final loc = entry.value;
@@ -469,6 +484,10 @@ class WaterQualityCharts {
               ),
             );
           }).toList(),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -612,8 +631,8 @@ class WaterQualityCharts {
   }
 
   static String _getLocationName(int index) {
-    final locations = ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'];
-    return locations.asMap().containsKey(index) ? locations[index] : 'Zone ${index + 1}';
+    final locations = ['Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Aurangabad', 'Thane', 'Kolhapur'];
+    return locations.asMap().containsKey(index) ? locations[index] : 'Location ${index + 1}';
   }
 
   static Widget _buildLegendItem(String label, int count, Color color) {

@@ -7,6 +7,7 @@ import 'package:pure_health/core/utils/responsive_utils.dart';
 import 'package:pure_health/shared/widgets/trend_chart.dart';
 import 'package:pure_health/shared/widgets/parameter_comparison_chart.dart';
 import 'package:pure_health/shared/widgets/zone_heatmap.dart';
+import 'package:pure_health/core/data/maharashtra_water_data.dart';
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -19,7 +20,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
   late TabController _tabController;
   DateTimeRange? _selectedDateRange;
   List<String> _selectedParameters = ['pH', 'Turbidity', 'DO'];
-  String _selectedZone = 'All Zones';
+  String _selectedLocation = 'All Locations';
   
   final List<String> _availableParameters = [
     'pH',
@@ -29,80 +30,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
     'Conductivity',
   ];
 
-  final List<String> _availableZones = [
-    'All Zones',
-    'Zone A',
-    'Zone B',
-    'Zone C',
-    'Zone D',
-  ];
+  // Get real Maharashtra districts
+  List<String> get _availableLocations => 
+      ['All Locations', ...MaharashtraWaterData.getDistricts()];
 
-  // Sample data
-  final List<Map<String, dynamic>> _sampleData = [
-    {
-      'pH': 7.2,
-      'turbidity': 2.1,
-      'status': 'Safe',
-      'location': 'Zone A',
-      'temperature': 25.0,
-      'conductivity': 500,
-      'timestamp': '2025-10-28 08:00'
-    },
-    {
-      'pH': 6.8,
-      'turbidity': 3.5,
-      'status': 'Safe',
-      'location': 'Zone B',
-      'temperature': 26.5,
-      'conductivity': 550,
-      'timestamp': '2025-10-29 08:00'
-    },
-    {
-      'pH': 7.5,
-      'turbidity': 1.8,
-      'status': 'Safe',
-      'location': 'Zone A',
-      'temperature': 24.0,
-      'conductivity': 480,
-      'timestamp': '2025-10-30 08:00'
-    },
-    {
-      'pH': 8.1,
-      'turbidity': 4.2,
-      'status': 'Warning',
-      'location': 'Zone C',
-      'temperature': 27.0,
-      'conductivity': 620,
-      'timestamp': '2025-10-31 08:00'
-    },
-    {
-      'pH': 7.0,
-      'turbidity': 2.8,
-      'status': 'Safe',
-      'location': 'Zone B',
-      'temperature': 25.5,
-      'conductivity': 530,
-      'timestamp': '2025-11-01 08:00'
-    },
-    {
-      'pH': 7.3,
-      'turbidity': 2.3,
-      'status': 'Safe',
-      'location': 'Zone D',
-      'temperature': 26.0,
-      'conductivity': 510,
-      'timestamp': '2025-11-02 08:00'
-    },
-    {
-      'pH': 6.9,
-      'turbidity': 3.1,
-      'status': 'Safe',
-      'location': 'Zone A',
-      'temperature': 24.5,
-      'conductivity': 495,
-      'timestamp': '2025-11-03 08:00'
-    },
-  ];
+  // Real Maharashtra water quality data
+  List<Map<String, dynamic>> get _sampleData {
+    return MaharashtraWaterQualityData.generateAllSamples(samplesPerStation: 10);
+  }
 
   @override
   void initState() {
@@ -354,7 +289,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
             ),
             const SizedBox(width: 8),
             Text(
-              _selectedZone,
+              _selectedLocation,
               style: AppTextStyles.body.copyWith(
                 color: Colors.grey[700],
                 fontSize: 13,
@@ -368,15 +303,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
           ],
         ),
       ),
-      itemBuilder: (context) => _availableZones.map((zone) {
+      itemBuilder: (context) => _availableLocations.map((location) {
         return PopupMenuItem<String>(
-          value: zone,
-          child: Text(zone),
+          value: location,
+          child: Text(location),
         );
       }).toList(),
-      onSelected: (zone) {
+      onSelected: (location) {
         setState(() {
-          _selectedZone = zone;
+          _selectedLocation = location;
         });
       },
     );
@@ -425,7 +360,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
         tabs: const [
           Tab(text: 'Trends'),
           Tab(text: 'Comparison'),
-          Tab(text: 'Zone Analysis'),
+          Tab(text: 'Location Analysis'),
         ],
       ),
     );
@@ -688,16 +623,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
             ),
           ),
           const SizedBox(height: 16),
-          _buildRankingRow(1, 'Zone A', 95.0, AppColors.success),
-          _buildRankingRow(2, 'Zone B', 88.0, AppColors.chartGreen),
-          _buildRankingRow(3, 'Zone D', 82.0, AppColors.warning),
-          _buildRankingRow(4, 'Zone C', 75.0, AppColors.chartOrange),
+          _buildRankingRow(1, 'Mumbai', 95.0, AppColors.success),
+          _buildRankingRow(2, 'Pune', 88.0, AppColors.chartGreen),
+          _buildRankingRow(3, 'Nagpur', 82.0, AppColors.warning),
+          _buildRankingRow(4, 'Nashik', 75.0, AppColors.chartOrange),
         ],
       ),
     );
   }
 
-  Widget _buildRankingRow(int rank, String zone, double score, Color color) {
+  Widget _buildRankingRow(int rank, String location, double score, Color color) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -722,7 +657,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
           const SizedBox(width: 16),
           Expanded(
             child: Text(
-              zone,
+              location,
               style: AppTextStyles.body.copyWith(
                 fontWeight: FontWeight.w600,
               ),

@@ -11,7 +11,7 @@ class ZoneHeatmap extends StatelessWidget {
   const ZoneHeatmap({
     super.key,
     required this.data,
-    this.title = 'Zone Quality Heatmap',
+    this.title = 'Location Quality Heatmap',
     this.selectedParameter = 'overall',
   });
 
@@ -62,7 +62,7 @@ class ZoneHeatmap extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Water quality distribution across monitoring zones',
+          'Water quality distribution across monitoring locations',
           style: AppTextStyles.body.copyWith(
             color: Colors.grey[600],
             fontSize: 12,
@@ -97,7 +97,7 @@ class ZoneHeatmap extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No zone data available',
+              'No location data available',
               style: AppTextStyles.body.copyWith(
                 color: Colors.grey[500],
               ),

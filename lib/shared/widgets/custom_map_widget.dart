@@ -9,6 +9,7 @@ class CustomMapWidget extends StatefulWidget {
   final List<Marker>? markers;
   final double sidebarWidth;
   final MapController? mapController;
+  final LatLng? initialCenter;
 
   const CustomMapWidget({
     Key? key,
@@ -16,6 +17,7 @@ class CustomMapWidget extends StatefulWidget {
     this.markers,
     this.sidebarWidth = 72.0,
     this.mapController,
+    this.initialCenter,
   }) : super(key: key);
 
   @override
@@ -35,6 +37,15 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
   }
 
   Future<void> _determinePosition() async {
+    // Use provided initial center if available
+    if (widget.initialCenter != null) {
+      setState(() {
+        _currentCenter = widget.initialCenter;
+        _loading = false;
+      });
+      return;
+    }
+    
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
