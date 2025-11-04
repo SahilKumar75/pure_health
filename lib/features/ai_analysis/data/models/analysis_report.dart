@@ -53,18 +53,18 @@ class AnalysisReport {
 
   factory AnalysisReport.fromJson(Map<String, dynamic> json) {
     return AnalysisReport(
-      id: json['id'],
-      timestamp: DateTime.parse(json['timestamp']),
-      fileName: json['fileName'],
+      id: json['id'] ?? '',
+      timestamp: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
+      fileName: json['fileName'] ?? 'unknown',
       location: json['location'] != null
           ? WaterBodyLocation.fromJson(json['location'])
           : null,
-      predictions: json['predictions'],
-      predictionStartDate: DateTime.parse(json['predictionStartDate']),
-      predictionEndDate: DateTime.parse(json['predictionEndDate']),
-      riskAssessment: RiskAssessment.fromJson(json['riskAssessment']),
-      trendAnalysis: TrendAnalysis.fromJson(json['trendAnalysis']),
-      recommendations: (json['recommendations'] as List)
+      predictions: json['predictions'] ?? {},
+      predictionStartDate: DateTime.tryParse(json['predictionStartDate'] ?? '') ?? DateTime.now(),
+      predictionEndDate: DateTime.tryParse(json['predictionEndDate'] ?? '') ?? DateTime.now().add(const Duration(days: 60)),
+      riskAssessment: RiskAssessment.fromJson(json['riskAssessment'] ?? {}),
+      trendAnalysis: TrendAnalysis.fromJson(json['trendAnalysis'] ?? {}),
+      recommendations: (json['recommendations'] as List? ?? [])
           .map((r) => Recommendation.fromJson(r))
           .toList(),
       rawData: json['rawData'],
@@ -94,12 +94,12 @@ class RiskAssessment {
 
   factory RiskAssessment.fromJson(Map<String, dynamic> json) {
     return RiskAssessment(
-      overallRiskLevel: json['overallRiskLevel'],
-      riskScore: json['riskScore'],
-      riskFactors: (json['riskFactors'] as List)
+      overallRiskLevel: json['overallRiskLevel'] ?? 'unknown',
+      riskScore: (json['riskScore'] ?? 0).toDouble(),
+      riskFactors: (json['riskFactors'] as List? ?? [])
           .map((f) => RiskFactor.fromJson(f))
           .toList(),
-      summary: json['summary'],
+      summary: json['summary'] ?? '',
     );
   }
 }
@@ -129,11 +129,11 @@ class RiskFactor {
 
   factory RiskFactor.fromJson(Map<String, dynamic> json) {
     return RiskFactor(
-      parameter: json['parameter'],
-      level: json['level'],
-      currentValue: json['currentValue'],
-      thresholdValue: json['thresholdValue'],
-      description: json['description'],
+      parameter: json['parameter'] ?? 'Unknown',
+      level: json['level'] ?? 'unknown',
+      currentValue: (json['currentValue'] ?? 0).toDouble(),
+      thresholdValue: (json['thresholdValue'] ?? json['standardMax'] ?? json['standardMin'] ?? 0).toDouble(),
+      description: json['description'] ?? '',
     );
   }
 }
@@ -157,11 +157,11 @@ class TrendAnalysis {
 
   factory TrendAnalysis.fromJson(Map<String, dynamic> json) {
     return TrendAnalysis(
-      parameterTrends: (json['parameterTrends'] as Map<String, dynamic>).map(
+      parameterTrends: (json['parameterTrends'] as Map<String, dynamic>? ?? {}).map(
         (k, v) => MapEntry(k, TrendData.fromJson(v)),
       ),
-      overallTrend: json['overallTrend'],
-      summary: json['summary'],
+      overallTrend: json['overallTrend'] ?? 'stable',
+      summary: json['summary'] ?? '',
     );
   }
 }
@@ -188,11 +188,13 @@ class TrendData {
 
   factory TrendData.fromJson(Map<String, dynamic> json) {
     return TrendData(
-      direction: json['direction'],
-      changePercentage: json['changePercentage'],
-      historicalValues: List<double>.from(json['historicalValues']),
-      timestamps: (json['timestamps'] as List)
-          .map((t) => DateTime.parse(t))
+      direction: json['direction'] ?? 'stable',
+      changePercentage: (json['changePercentage'] ?? 0).toDouble(),
+      historicalValues: (json['historicalValues'] as List? ?? [])
+          .map<double>((v) => (v ?? 0).toDouble())
+          .toList(),
+      timestamps: (json['timestamps'] as List? ?? [])
+          .map((t) => DateTime.tryParse(t.toString()) ?? DateTime.now())
           .toList(),
     );
   }
@@ -226,12 +228,14 @@ class Recommendation {
 
   factory Recommendation.fromJson(Map<String, dynamic> json) {
     return Recommendation(
-      priority: json['priority'],
-      category: json['category'],
-      title: json['title'],
-      description: json['description'],
-      actionItems: List<String>.from(json['actionItems']),
-      timeframe: json['timeframe'],
+      priority: json['priority'] ?? 'medium',
+      category: json['category'] ?? 'general',
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      actionItems: (json['actionItems'] as List? ?? [])
+          .map((item) => item.toString())
+          .toList(),
+      timeframe: json['timeframe'] ?? 'short-term',
     );
   }
 }

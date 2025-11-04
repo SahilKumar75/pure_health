@@ -217,4 +217,52 @@ class AIAnalysisService {
       throw Exception('Delete error: ${e.message}');
     }
   }
+
+  /// Generate PDF report
+  Future<Map<String, dynamic>> generatePDFReport({
+    required Map<String, dynamic> analysisData,
+    String reportType = 'comprehensive',
+  }) async {
+    try {
+      final response = await _dio.post(
+        '$baseUrl/api/reports/generate',
+        data: {
+          'analysis_data': analysisData,
+          'type': reportType,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception('Report generation failed: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      throw Exception('Report generation error: ${e.message}');
+    }
+  }
+
+  /// Download PDF report
+  Future<void> downloadReport(String filename, String savePath) async {
+    try {
+      final response = await _dio.get(
+        '$baseUrl/api/reports/download/$filename',
+        options: Options(responseType: ResponseType.bytes),
+      );
+
+      if (response.statusCode == 200) {
+        // Save file logic here - will be handled in the UI layer
+        throw UnimplementedError('File saving should be handled in UI layer');
+      } else {
+        throw Exception('Download failed: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      throw Exception('Download error: ${e.message}');
+    }
+  }
+
+  /// Get report download URL
+  String getReportDownloadUrl(String filename) {
+    return '$baseUrl/api/reports/download/$filename';
+  }
 }

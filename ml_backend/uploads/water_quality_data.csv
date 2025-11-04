@@ -1,0 +1,10 @@
+Date,Location,pH,Turbidity,DissolvedOxygen,Temperature,Conductivity,Status
+2025-11-01,Zone A,7.2,2.1,8.5,25.0,500,Safe
+2025-11-01,Zone B,6.8,3.5,7.2,22.0,480,Warning
+2025-11-01,Zone C,5.5,8.2,4.1,28.0,620,Critical
+2025-11-02,Zone A,7.1,2.0,8.4,24.5,510,Safe
+2025-11-02,Zone B,6.9,3.2,7.5,23.0,490,Warning
+2025-11-02,Zone C,5.8,7.9,4.3,27.5,610,Critical
+2025-11-03,Zone A,7.3,1.9,8.6,25.5,505,Safe
+2025-11-03,Zone B,7.0,3.1,7.8,24.0,495,Safe
+2025-11-03,Zone C,5.4,8.5,3.9,29.0,630,Critical

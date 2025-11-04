@@ -191,6 +191,40 @@ class AIAnalysisViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Generate PDF report
+  Future<Map<String, dynamic>> generatePDFReport() async {
+    if (_currentReport == null) {
+      _error = 'No report to generate PDF from';
+      notifyListeners();
+      throw Exception('No report available');
+    }
+
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final result = await _service.generatePDFReport(
+        analysisData: _currentReport!.toJson(),
+        reportType: 'comprehensive',
+      );
+      
+      return result;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Get report download URL
+  String getReportDownloadUrl(String filename) {
+    return _service.getReportDownloadUrl(filename);
+  }
+
   /// Get all Maharashtra water bodies
   List<WaterBodyLocation> getAllWaterBodies() {
     return MaharashtraWaterBodies.allWaterBodies;

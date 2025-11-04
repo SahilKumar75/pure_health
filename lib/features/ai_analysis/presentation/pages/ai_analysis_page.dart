@@ -147,6 +147,36 @@ class _AIAnalysisPageState extends State<AIAnalysisPage> {
             const SizedBox(width: 12),
             CupertinoButton(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              onPressed: viewModel.isLoading
+                  ? null
+                  : () => _generatePDFReport(context, viewModel),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.accentPink,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      CupertinoIcons.doc_text_fill,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Generate PDF',
+                      style: AppTextStyles.button.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               onPressed: () => _clearAnalysis(context, viewModel),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -286,23 +316,28 @@ class _AIAnalysisPageState extends State<AIAnalysisPage> {
     final features = [
       {
         'icon': CupertinoIcons.chart_bar_alt_fill,
-        'title': '2-Month Predictions',
-        'description': 'Get accurate predictions for water quality parameters for the next 2 months',
+        'title': '60-Day Predictions',
+        'description': 'AI-powered forecasts for water quality parameters for the next 2 months',
       },
       {
         'icon': CupertinoIcons.exclamationmark_triangle_fill,
         'title': 'Risk Assessment',
-        'description': 'Comprehensive risk analysis with scores and contamination factors',
+        'description': 'Comprehensive contamination risk scoring and health impact analysis',
       },
       {
         'icon': CupertinoIcons.arrow_up_right_circle_fill,
         'title': 'Trend Analysis',
-        'description': 'Historical trends and patterns for all water quality parameters',
+        'description': 'Historical patterns, anomaly detection, and seasonal trend identification',
       },
       {
         'icon': CupertinoIcons.lightbulb_fill,
-        'title': 'Recommendations',
-        'description': 'Actionable recommendations for treatment, monitoring, and policy',
+        'title': 'Smart Recommendations',
+        'description': 'Actionable treatment, monitoring, infrastructure, and policy suggestions',
+      },
+      {
+        'icon': CupertinoIcons.doc_text_fill,
+        'title': 'PDF Report Generation',
+        'description': 'Professional reports with MPCB compliance and government branding',
       },
     ];
 
@@ -409,6 +444,29 @@ class _AIAnalysisPageState extends State<AIAnalysisPage> {
     } catch (e) {
       if (mounted) {
         ToastNotification.error(context, 'Save failed: ${e.toString()}');
+      }
+    }
+  }
+
+  Future<void> _generatePDFReport(BuildContext context, AIAnalysisViewModel viewModel) async {
+    try {
+      final result = await viewModel.generatePDFReport();
+      
+      if (mounted) {
+        // Get the download URL for the generated report
+        viewModel.getReportDownloadUrl(result['filename']);
+        
+        ToastNotification.success(
+          context,
+          'PDF Report generated successfully! Check your Downloads folder.',
+        );
+        
+        // The backend handles the file download automatically
+        // You can add url_launcher here if you want to open the PDF
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastNotification.error(context, 'PDF generation failed: ${e.toString()}');
       }
     }
   }

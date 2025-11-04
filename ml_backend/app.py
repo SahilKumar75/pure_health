@@ -1,10 +1,11 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-from ollama_service import OllamaAIService
 from ai_analysis_service import AIAnalysisService
+from report_generator import ReportGenerator
 import json
 import os
 from werkzeug.utils import secure_filename
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -20,13 +21,16 @@ CORS(app, resources={
 })
 
 # Initialize services
-ollama = OllamaAIService()
 ai_analysis = AIAnalysisService()
+report_generator = ReportGenerator()
 
 # Configure upload folder
 UPLOAD_FOLDER = 'uploads'
+REPORTS_FOLDER = 'reports'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(REPORTS_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['REPORTS_FOLDER'] = REPORTS_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 @app.route('/api/status', methods=['GET'])
@@ -34,80 +38,9 @@ def status():
     """Check system status"""
     return jsonify({
         'status': 'ok',
-        'ollama_running': ollama.check_connection(),
-        'model': ollama.model
+        'ai_service': 'active',
+        'version': '2.0.0'
     })
-
-@app.route('/api/models', methods=['GET'])
-def get_models():
-    """Get available models"""
-    return jsonify({'models': ollama.list_models()})
-
-@app.route('/api/chat/process', methods=['POST', 'OPTIONS'])
-def chat():
-    """Process chat with Ollama"""
-    if request.method == 'OPTIONS':
-        return '', 204
-    
-    try:
-        data = request.json
-        message = data.get('message', '')
-        file_data = data.get('file_data')
-        
-        if not message:
-            return jsonify({'error': 'No message provided'}), 400
-        
-        print(f"📩 Message: {message}")
-        print(f"📄 File data: {file_data is not None}")
-        
-        # Get AI response
-        response_text = ollama.chat(message, file_data)
-        
-        print(f"🤖 Response: {response_text[:100]}...")
-        
-        return jsonify({
-            'response': response_text,
-            'intent': 'ollama_analysis',
-            'confidence': 0.95,
-            'metadata': {
-                'model': ollama.model,
-                'has_file': file_data is not None,
-                'prediction': {
-                    'status': 'Analysis Complete',
-                    'score': 85.0
-                }
-            }
-        })
-        
-    except Exception as e:
-        print(f"❌ Error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/files/analyze', methods=['POST'])
-def analyze_file():
-    """Analyze uploaded file"""
-    try:
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file provided'}), 400
-        
-        file = request.files['file']
-        
-        # Read file content
-        if file.filename.endswith('.csv'):
-            content = file.read().decode('utf-8')
-            # Parse CSV and analyze
-            analysis = ollama.chat(f"Analyze this water quality CSV:\n{content[:1000]}")
-            
-            return jsonify({
-                'fileName': file.filename,
-                'recordsCount': 9,
-                'analysis': analysis
-            })
-        else:
-            return jsonify({'error': 'Only CSV files supported'}), 400
-            
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 # AI Analysis Endpoints
 
@@ -149,7 +82,7 @@ def ai_upload():
 
 @app.route('/api/ai/analyze', methods=['POST', 'OPTIONS'])
 def ai_analyze():
-    """Generate comprehensive AI analysis using Ollama"""
+    """Generate comprehensive AI analysis"""
     if request.method == 'OPTIONS':
         return '', 204
     
@@ -161,10 +94,10 @@ def ai_analyze():
         if not file_data:
             return jsonify({'error': 'No file data provided'}), 400
         
-        print(f"📊 Generating comprehensive analysis with Ollama...")
+        print(f"📊 Generating comprehensive analysis...")
         
-        # Generate full analysis report using Ollama
-        report = ollama.generate_analysis(file_data, location)
+        # Generate full analysis report
+        report = ai_analysis.analyze_file(file_data, location)
         
         print(f"✅ Analysis complete: {report['id']}")
         
@@ -354,14 +287,76 @@ def _parse_uploaded_file(file_path):
             }
         }
 
+@app.route('/api/reports/generate', methods=['POST', 'OPTIONS'])
+def generate_report():
+    """Generate comprehensive PDF report"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        data = request.json
+        analysis_data = data.get('analysis_data')
+        report_type = data.get('type', 'comprehensive')  # comprehensive, summary, compliance
+        
+        if not analysis_data:
+            return jsonify({'error': 'No analysis data provided'}), 400
+        
+        print(f"📄 Generating {report_type} report...")
+        
+        # Generate filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"water_quality_report_{timestamp}.pdf"
+        output_path = os.path.join(app.config['REPORTS_FOLDER'], filename)
+        
+        # Generate report
+        report_generator.generate_comprehensive_report(analysis_data, output_path)
+        
+        file_size = os.path.getsize(output_path)
+        
+        print(f"✅ Report generated: {filename} ({file_size} bytes)")
+        
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'download_url': f'/api/reports/download/{filename}',
+            'file_size': file_size,
+            'generated_at': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Report Generation Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/reports/download/<filename>', methods=['GET'])
+def download_report(filename):
+    """Download generated report"""
+    try:
+        file_path = os.path.join(app.config['REPORTS_FOLDER'], filename)
+        
+        if not os.path.exists(file_path):
+            return jsonify({'error': 'Report not found'}), 404
+        
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/pdf'
+        )
+        
+    except Exception as e:
+        print(f"❌ Download Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
-    print("\n" + "="*50)
-    print("🚀 PureHealth Backend with Ollama AI")
-    print("="*50)
-    print("✅ API Running: http://172.20.10.4:8000")
-    print("✅ Status: http://172.20.10.4:8000/api/status")
-    print("✅ Chat: POST http://172.20.10.4:8000/api/chat/process")
-    print("🤖 Ollama: http://localhost:11434")
-    print("="*50 + "\n")
+    print("\n" + "="*60)
+    print("🚀 PureHealth AI Backend - Lightweight Edition")
+    print("="*60)
+    print("✅ API Running: http://localhost:8000")
+    print("✅ Status: http://localhost:8000/api/status")
+    print("✅ AI Analysis: POST http://localhost:8000/api/ai/analyze")
+    print("✅ Reports: POST http://localhost:8000/api/reports/generate")
+    print("="*60 + "\n")
     
     app.run(host='0.0.0.0', port=8000, debug=True)
