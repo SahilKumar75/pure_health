@@ -78,41 +78,11 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
       );
     }
 
-    // Build the current location marker
-    final currentLocationMarker = Marker(
-      point: _currentCenter!,
-      width: 48,
-      height: 48,
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppColors.white,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.darkVanilla.withOpacity(0.2),
-              blurRadius: 8,
-              spreadRadius: 2,
-            ),
-          ],
-          border: Border.all(
-            color: AppColors.darkVanilla,
-            width: 2,
-          ),
-        ),
-        child: Icon(
-          Icons.location_on,
-          color: AppColors.darkVanilla,
-          size: 28,
-        ),
-      ),
-    );
-
-    // Combine user markers and current location marker
+    // Don't add default location marker - let the parent handle all markers
     final allMarkers = <Marker>[];
     if (widget.markers != null) {
       allMarkers.addAll(widget.markers!);
     }
-    allMarkers.add(currentLocationMarker);
 
     return Container(
       decoration: BoxDecoration(

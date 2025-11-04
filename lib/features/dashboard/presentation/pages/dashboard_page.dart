@@ -175,7 +175,7 @@ class _DashboardPageState extends State<DashboardPage> with AccessibilityMixin {
         timestamp: timestamp,
         ph: (data['pH'] as num).toDouble(),
         turbidity: (data['turbidity'] as num).toDouble(),
-        dissolvedOxygen: ((data['pH'] as num) + 2).toDouble(), // Simulated DO
+        dissolvedOxygen: (data['dissolvedOxygen'] as num).toDouble(),
         temperature: (data['temperature'] as num).toDouble(),
         conductivity: (data['conductivity'] as num).toDouble(),
         location: data['location'] as String,

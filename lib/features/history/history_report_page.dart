@@ -20,7 +20,7 @@ class HistoryReportPage extends StatefulWidget {
 }
 
 class _HistoryReportPageState extends State<HistoryReportPage> {
-  int _selectedIndex = 2;
+  int _selectedIndex = 3; // History moved after AI Analysis
   bool _isLoading = true;
   List<Map<String, dynamic>> _historyData = [];
   List<Map<String, dynamic>> _filteredData = [];

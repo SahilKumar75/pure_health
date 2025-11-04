@@ -4,12 +4,99 @@ import 'package:pure_health/core/constants/color_constants.dart';
 import 'package:pure_health/core/theme/text_styles.dart';
 import 'package:pure_health/shared/widgets/custom_sidebar.dart';
 import 'package:pure_health/shared/widgets/custom_map_widget.dart';
-import 'package:pure_health/shared/widgets/vertical_floating_card.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:pure_health/core/data/maharashtra_water_data.dart';
+import 'package:geolocator/geolocator.dart';
 import 'dart:async';
-import '../../../../core/models/monitoring_location.dart';
+
+// Pulsing location dot widget
+class PulsingLocationDot extends StatefulWidget {
+  const PulsingLocationDot({super.key});
+
+  @override
+  State<PulsingLocationDot> createState() => _PulsingLocationDotState();
+}
+
+class _PulsingLocationDotState extends State<PulsingLocationDot> 
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+    
+    _animation = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // Animated pulsing outer ring
+            Transform.scale(
+              scale: _animation.value,
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primaryBlue.withOpacity(0.15),
+                ),
+              ),
+            ),
+            // Middle ring
+            Transform.scale(
+              scale: 0.7,
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primaryBlue.withOpacity(0.25),
+                ),
+              ),
+            ),
+            // Inner dot with white border (fixed size)
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primaryBlue,
+                border: Border.all(color: AppColors.white, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryBlue.withOpacity(0.6),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,7 +112,6 @@ class _HomePageState extends State<HomePage> {
   double _currentZoom = 7.0; // Lower zoom to show all of Maharashtra
   
   // Real-time data
-  List<MonitoringLocation> _stations = [];
   Map<String, Map<String, dynamic>> _stationData = {};
   Timer? _dataUpdateTimer;
   int _totalStations = 0;
@@ -33,6 +119,9 @@ class _HomePageState extends State<HomePage> {
   int _safeCount = 0;
   int _warningCount = 0;
   int _criticalCount = 0;
+  DateTime _lastDataFetch = DateTime.now();
+  String? _selectedStationId;
+  LatLng? _userLocation; // User's current location
 
   @override
   void initState() {
@@ -40,6 +129,84 @@ class _HomePageState extends State<HomePage> {
     _mapController = MapController();
     _loadMaharashtraData();
     _startDataUpdates();
+    _getUserLocation();
+  }
+
+  /// Get user's current location
+  Future<void> _getUserLocation() async {
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        // Location services are not enabled, use fallback
+        const fallbackLoc = LatLng(18.5204, 73.8567); // Pune, Maharashtra
+        setState(() {
+          _userLocation = fallbackLoc;
+        });
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _mapController.move(fallbackLoc, 10.0);
+        });
+        return;
+      }
+
+      // Check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          // Permission denied, use fallback
+          const fallbackLoc = LatLng(18.5204, 73.8567); // Pune, Maharashtra
+          setState(() {
+            _userLocation = fallbackLoc;
+          });
+          Future.delayed(const Duration(milliseconds: 500), () {
+            _mapController.move(fallbackLoc, 10.0);
+          });
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        // Permissions are permanently denied, use fallback
+        const fallbackLoc = LatLng(18.5204, 73.8567); // Pune, Maharashtra
+        setState(() {
+          _userLocation = fallbackLoc;
+        });
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _mapController.move(fallbackLoc, 10.0);
+        });
+        return;
+      }
+
+      // Get actual current position
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 100,
+        ),
+      );
+      
+      final userLoc = LatLng(position.latitude, position.longitude);
+      
+      setState(() {
+        _userLocation = userLoc;
+      });
+      
+      // Center map on user's actual location
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _mapController.move(userLoc, 12.0); // Zoom level 12 for closer view
+      });
+    } catch (e) {
+      // Error getting location, use fallback
+      const fallbackLoc = LatLng(18.5204, 73.8567); // Pune, Maharashtra
+      setState(() {
+        _userLocation = fallbackLoc;
+      });
+      
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _mapController.move(fallbackLoc, 10.0);
+      });
+    }
   }
 
   @override
@@ -53,8 +220,8 @@ class _HomePageState extends State<HomePage> {
     final allStations = MaharashtraWaterData.getAllStations();
     
     setState(() {
-      _stations = allStations;
       _totalStations = allStations.length;
+      _lastDataFetch = DateTime.now();
       
       // Generate sample data for each station
       for (var station in allStations) {
@@ -73,12 +240,27 @@ class _HomePageState extends State<HomePage> {
             'latitude': station.latitude,
             'longitude': station.longitude,
             'name': station.displayName,
+            'stationType': station.stationType,
+            'timestamp': _lastDataFetch,
           };
         }
       }
       
       _updateStats();
     });
+  }
+
+  String _getTimeAgo(DateTime timestamp) {
+    final difference = DateTime.now().difference(timestamp);
+    if (difference.inSeconds < 60) {
+      return '${difference.inSeconds}s ago';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
   }
 
   void _updateStats() {
@@ -115,59 +297,111 @@ class _HomePageState extends State<HomePage> {
   List<Marker> _buildStationMarkers() {
     final markers = <Marker>[];
     
+    // Add user's current location marker (pulsing blue dot - Google Maps style)
+    if (_userLocation != null) {
+      markers.add(
+        Marker(
+          point: _userLocation!,
+          width: 50,
+          height: 50,
+          child: const PulsingLocationDot(),
+        ),
+      );
+    }
+    
+    // Add MPCB monitoring station markers
     _stationData.forEach((stationId, data) {
       final lat = data['latitude'] as double;
       final lon = data['longitude'] as double;
       final status = data['status'] as String;
+      final timestamp = data['timestamp'] as DateTime;
+      final name = data['name'] as String;
+      final stationType = data['stationType'] as String;
       
-      // Status colors
+      // Status colors following MPCB standards
       Color markerColor;
-      IconData markerIcon;
+      Color backgroundColor;
       
       switch (status) {
         case 'Safe':
-          markerColor = AppColors.success;
-          markerIcon = Icons.check_circle;
+          markerColor = const Color(0xFF10B981); // Green - Safe
+          backgroundColor = const Color(0xFF10B981).withOpacity(0.2);
           break;
         case 'Warning':
-          markerColor = AppColors.warning;
-          markerIcon = Icons.warning;
+          markerColor = const Color(0xFFF59E0B); // Amber - Caution
+          backgroundColor = const Color(0xFFF59E0B).withOpacity(0.2);
           break;
         case 'Critical':
-          markerColor = AppColors.error;
-          markerIcon = Icons.error;
+          markerColor = const Color(0xFFEF4444); // Red - Alert
+          backgroundColor = const Color(0xFFEF4444).withOpacity(0.2);
           break;
         default:
           markerColor = AppColors.charcoal;
-          markerIcon = Icons.location_on;
+          backgroundColor = AppColors.charcoal.withOpacity(0.2);
       }
       
       markers.add(
         Marker(
           point: LatLng(lat, lon),
-          width: 40,
-          height: 40,
-          child: GestureDetector(
-            onTap: () {
-              _showStationDetails(stationId, data);
-            },
-            child: Container(
+          width: 56,
+          height: 56,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: Tooltip(
+              message: '$name\n$stationType\nStatus: $status\nUpdated: ${_getTimeAgo(timestamp)}',
+              preferBelow: false,
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: markerColor,
-                border: Border.all(color: AppColors.white, width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: markerColor.withOpacity(0.4),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                  ),
-                ],
+                color: AppColors.charcoal.withOpacity(0.95),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                markerIcon,
-                color: AppColors.white,
-                size: 22,
+              textStyle: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedStationId = stationId;
+                  });
+                },
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Outer glow/pulse effect
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: backgroundColor,
+                      ),
+                    ),
+                    // Main station marker
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: markerColor,
+                        border: Border.all(color: Colors.white, width: 2.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.water_drop,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -176,81 +410,6 @@ class _HomePageState extends State<HomePage> {
     });
     
     return markers;
-  }
-
-  void _showStationDetails(String stationId, Map<String, dynamic> data) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(
-              Icons.location_on,
-              color: AppColors.primaryBlue,
-              size: 28,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                data['name'] as String,
-                style: AppTextStyles.heading3.copyWith(
-                  color: AppColors.primaryBlue,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDetailRow('Status', data['status'] as String, 
-              _getStatusColor(data['status'] as String)),
-            const SizedBox(height: 12),
-            _buildDetailRow('pH Level', '${(data['pH'] as double).toStringAsFixed(2)}', 
-              AppColors.charcoal),
-            const SizedBox(height: 12),
-            _buildDetailRow('Turbidity', '${(data['turbidity'] as double).toStringAsFixed(2)} NTU', 
-              AppColors.charcoal),
-            const SizedBox(height: 12),
-            _buildDetailRow('Dissolved Oxygen', '${(data['dissolvedOxygen'] as double).toStringAsFixed(2)} mg/L', 
-              AppColors.charcoal),
-            const SizedBox(height: 12),
-            _buildDetailRow('Temperature', '${(data['temperature'] as double).toStringAsFixed(1)}°C', 
-              AppColors.charcoal),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: TextStyle(color: AppColors.primaryBlue)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value, Color valueColor) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: AppTextStyles.body.copyWith(
-            color: AppColors.charcoal.withOpacity(0.7),
-          ),
-        ),
-        Text(
-          value,
-          style: AppTextStyles.body.copyWith(
-            color: valueColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
   }
 
   Color _getStatusColor(String status) {
@@ -384,6 +543,280 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: AppColors.primaryBlue,
+          size: 20,
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: AppTextStyles.heading4.copyWith(
+            color: AppColors.primaryBlue,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStationDetailsPanel() {
+    if (_selectedStationId == null) return const SizedBox.shrink();
+    
+    final stationData = _stationData[_selectedStationId];
+    if (stationData == null) return const SizedBox.shrink();
+    
+    final status = stationData['status'] as String;
+    // Station name is shown in the panel header above
+    final pH = stationData['pH'] as double;
+    final turbidity = stationData['turbidity'] as double;
+    final dissolvedOxygen = stationData['dissolvedOxygen'] as double;
+    final temperature = stationData['temperature'] as double;
+    final timestamp = stationData['timestamp'] as DateTime;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Status Badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: _getStatusColor(status).withOpacity(0.15),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _getStatusColor(status),
+              width: 1.5,
+            ),
+          ),
+          child: Text(
+            status,
+            style: AppTextStyles.caption.copyWith(
+              color: _getStatusColor(status),
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Updated ${_getTimeAgo(timestamp)}',
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.mediumGray,
+            fontSize: 12,
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Current Readings
+        _buildSectionHeader('Current Readings', Icons.analytics),
+        const SizedBox(height: 16),
+                _buildReadingCard('pH Level', pH.toStringAsFixed(2), 'Neutral: 6.5-8.5', Icons.water_drop),
+                const SizedBox(height: 12),
+                _buildReadingCard('Turbidity', '${turbidity.toStringAsFixed(2)} NTU', 'Max: 5 NTU', Icons.blur_on),
+                const SizedBox(height: 12),
+                _buildReadingCard('Dissolved Oxygen', '${dissolvedOxygen.toStringAsFixed(2)} mg/L', 'Min: 4 mg/L', Icons.air),
+                const SizedBox(height: 12),
+                _buildReadingCard('Temperature', '${temperature.toStringAsFixed(1)}°C', 'Normal: 20-30°C', Icons.thermostat),
+                
+                const SizedBox(height: 24),
+                
+                // AI Predictions
+                _buildSectionHeader('AI Predictions', Icons.trending_up),
+                const SizedBox(height: 16),
+                _buildPredictionCard('Next 7 Days', 'Quality expected to remain ${status.toLowerCase()}', Icons.calendar_today),
+                const SizedBox(height: 12),
+                _buildPredictionCard('Risk Level', 'Low contamination risk', Icons.shield),
+                
+                const SizedBox(height: 24),
+                
+                // Quick Insights
+                _buildSectionHeader('Key Insights', Icons.lightbulb_outline),
+                const SizedBox(height: 16),
+                _buildInsightItem('✓ All parameters within safe limits', AppColors.success),
+                const SizedBox(height: 8),
+                _buildInsightItem('↗ Slight pH increase trend observed', AppColors.warning),
+                const SizedBox(height: 8),
+                _buildInsightItem('→ Regular monitoring recommended', AppColors.primaryBlue),
+                
+                const SizedBox(height: 24),
+                
+                // Actions
+                _buildSectionHeader('Available Actions', Icons.touch_app),
+                const SizedBox(height: 16),
+        _buildActionButton2('View Full Report', Icons.description, () {}),
+        const SizedBox(height: 10),
+        _buildActionButton2('Export Data', Icons.download, () {}),
+        const SizedBox(height: 10),
+        _buildActionButton2('Set Alert', Icons.notifications, () {}),
+      ],
+    );
+  }
+
+  Widget _buildReadingCard(String label, String value, String range, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.lightCream,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.darkCream.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: AppColors.primaryBlue, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.mediumGray,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: AppTextStyles.heading4.copyWith(
+                    color: AppColors.charcoal,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  range,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.mediumGray,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPredictionCard(String title, String description, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.success.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.success.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.success, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.charcoal,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.mediumGray,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInsightItem(String text, Color color) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 2),
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.charcoal,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton2(String label, IconData icon, VoidCallback onPressed) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.primaryBlue.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: AppColors.primaryBlue.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: AppColors.primaryBlue, size: 18),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.primaryBlue,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -414,165 +847,14 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // Logo positioned beside sidebar at top left
+          // Compact Logo positioned beside sidebar at top left
           Positioned(
             left: 96,
             top: 24,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            child: Container(
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppColors.white.withOpacity(0.95),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppColors.darkCream.withOpacity(0.3),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.charcoal.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Logo image from assets
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.darkVanilla.withOpacity(0.15),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        'assets/Group 1000001052.png',
-                        width: 48,
-                        height: 48,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Logo text
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'PureHealth',
-                        style: AppTextStyles.heading3.copyWith(
-                          color: AppColors.charcoal,
-                          letterSpacing: -0.6,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Maharashtra Water Quality Monitoring',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.mediumGray,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Quick Stats Overlay - Top Left (below logo)
-          Positioned(
-            left: 96,
-            top: 140,
-            child: Container(
-              width: 300,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppColors.white.withOpacity(0.96),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppColors.darkCream.withOpacity(0.3),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.charcoal.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.analytics_outlined,
-                        color: AppColors.primaryBlue,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'System Status',
-                        style: AppTextStyles.heading4.copyWith(
-                          color: AppColors.primaryBlue,
-                          fontSize: 17,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  _buildStatRow(
-                    'Total Stations',
-                    _totalStations.toString(),
-                    Icons.location_on,
-                    AppColors.primaryBlue,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildStatRow(
-                    'Active Alerts',
-                    _activeAlerts.toString(),
-                    Icons.notifications_active,
-                    _activeAlerts > 0 ? AppColors.warning : AppColors.success,
-                  ),
-                  const SizedBox(height: 10),
-                  Divider(height: 1, color: AppColors.darkCream.withOpacity(0.3)),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildStatusBadge('Safe', _safeCount, AppColors.success),
-                      _buildStatusBadge('Warning', _warningCount, AppColors.warning),
-                      _buildStatusBadge('Critical', _criticalCount, AppColors.error),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Map Legend - Compact, Bottom Left
-          Positioned(
-            left: 96,
-            bottom: 100,
-            child: Container(
-              width: 280,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.white.withOpacity(0.96),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: AppColors.darkCream.withOpacity(0.3),
@@ -586,46 +868,166 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.map_outlined,
-                        color: AppColors.primaryBlue,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Map Legend',
-                        style: AppTextStyles.heading4.copyWith(
-                          color: AppColors.primaryBlue,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildLegendItem('Safe', 'Within limits', AppColors.success, Icons.check_circle),
-                  const SizedBox(height: 8),
-                  _buildLegendItem('Warning', 'Approaching limits', AppColors.warning, Icons.warning),
-                  const SizedBox(height: 8),
-                  _buildLegendItem('Critical', 'Exceeds limits', AppColors.error, Icons.error),
-                ],
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'assets/Group 1000001052.png',
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
           ),
 
-          // Chat floating card on the right - initially collapsed to reduce clutter
-          const VerticalFloatingCard(
-            width: 380,
-            initiallyCollapsed: true,
-            alignment: Alignment.centerRight,
+          // Right Side Panel - Comprehensive Info Card
+          Positioned(
+            right: 24,
+            top: 24,
+            bottom: 24,
+            child: Container(
+              width: 340,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.white.withOpacity(0.97),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: AppColors.darkCream.withOpacity(0.3),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.charcoal.withOpacity(0.12),
+                    blurRadius: 32,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header with back button if station selected
+                    Row(
+                      children: [
+                        if (_selectedStationId != null) 
+                          IconButton(
+                            icon: Icon(Icons.arrow_back, color: AppColors.primaryBlue),
+                            onPressed: () => setState(() => _selectedStationId = null),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        if (_selectedStationId != null) const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryBlue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            _selectedStationId != null ? Icons.water_drop : Icons.dashboard_rounded,
+                            color: AppColors.primaryBlue,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _selectedStationId != null 
+                                    ? (_stationData[_selectedStationId]?['name'] as String? ?? 'Station Details')
+                                    : 'PureHealth',
+                                style: AppTextStyles.heading3.copyWith(
+                                  color: AppColors.charcoal,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: _selectedStationId != null ? 18 : 20,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                _selectedStationId != null
+                                    ? 'MPCB Monitoring Station'
+                                    : 'Maharashtra Water Monitoring',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.mediumGray,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 28),
+                    
+                    // Show station details OR dashboard
+                    if (_selectedStationId != null) 
+                      _buildStationDetailsPanel()
+                    else ...[
+                      // System Status Section
+                      _buildSectionHeader('System Status', Icons.analytics_outlined),
+                    const SizedBox(height: 16),
+                    _buildStatRow(
+                      'Total Stations',
+                      _totalStations.toString(),
+                      Icons.location_on,
+                      AppColors.primaryBlue,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildStatRow(
+                      'Active Alerts',
+                      _activeAlerts.toString(),
+                      Icons.notifications_active,
+                      _activeAlerts > 0 ? AppColors.warning : AppColors.success,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildStatRow(
+                      'Last Updated',
+                      'Just now',
+                      Icons.access_time,
+                      AppColors.mediumGray,
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    Divider(height: 1, color: AppColors.darkCream.withOpacity(0.4)),
+                    const SizedBox(height: 20),
+                    
+                    // Status Distribution
+                    _buildSectionHeader('Status Distribution', Icons.pie_chart_outline),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStatusBadge('Safe', _safeCount, AppColors.success),
+                        _buildStatusBadge('Warning', _warningCount, AppColors.warning),
+                        _buildStatusBadge('Critical', _criticalCount, AppColors.error),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    Divider(height: 1, color: AppColors.darkCream.withOpacity(0.4)),
+                    const SizedBox(height: 20),
+                    
+                    // Map Legend
+                    _buildSectionHeader('Map Legend', Icons.map_outlined),
+                    const SizedBox(height: 16),
+                    _buildLegendItem('Safe', 'Within limits', AppColors.success, Icons.check_circle),
+                    const SizedBox(height: 12),
+                    _buildLegendItem('Warning', 'Approaching limits', AppColors.warning, Icons.warning),
+                    const SizedBox(height: 12),
+                    _buildLegendItem('Critical', 'Exceeds limits', AppColors.error, Icons.error),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ),
 
-          // Bottom center expandable control bar
+          // Bottom center expandable control bar with more options
           Positioned(
             left: 0,
             right: 0,
@@ -638,17 +1040,17 @@ class _HomePageState extends State<HomePage> {
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
                   height: 56,
-                  width: _isBottomBarExpanded ? 200 : 100,
+                  width: _isBottomBarExpanded ? 440 : 100,
                   decoration: BoxDecoration(
                     color: AppColors.white.withOpacity(0.95),
                     borderRadius: BorderRadius.circular(32),
                     border: Border.all(
                       color: AppColors.darkCream.withOpacity(0.3),
-                      width: 1,
+                      width: 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.charcoal.withOpacity(0.1),
+                        color: AppColors.charcoal.withOpacity(0.12),
                         blurRadius: 24,
                         offset: const Offset(0, 8),
                       ),
@@ -659,27 +1061,100 @@ class _HomePageState extends State<HomePage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Zoom Out button
-                        if (_isBottomBarExpanded)
+                        // Expanded options
+                        if (_isBottomBarExpanded) ...[
+                          // Zoom Out
                           AnimatedOpacity(
                             opacity: 1.0,
                             duration: const Duration(milliseconds: 200),
-                            child: _buildIconButton(
+                            child: _buildControlButton(
                               icon: CupertinoIcons.minus_circle_fill,
+                              tooltip: 'Zoom Out',
                               onPressed: _zoomOut,
                             ),
                           ),
-                        // Zoom In button
-                        if (_isBottomBarExpanded)
+                          // Zoom In
                           AnimatedOpacity(
                             opacity: 1.0,
                             duration: const Duration(milliseconds: 200),
-                            child: _buildIconButton(
+                            child: _buildControlButton(
                               icon: CupertinoIcons.plus_circle_fill,
+                              tooltip: 'Zoom In',
                               onPressed: _zoomIn,
                             ),
                           ),
-                        // Zoom button (always visible)
+                          // Vertical divider
+                          Container(
+                            height: 32,
+                            width: 1,
+                            color: AppColors.darkCream.withOpacity(0.3),
+                          ),
+                          // Reset View
+                          AnimatedOpacity(
+                            opacity: 1.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: _buildControlButton(
+                              icon: CupertinoIcons.location_fill,
+                              tooltip: 'Reset View',
+                              onPressed: () {
+                                setState(() {
+                                  _currentZoom = 7.0;
+                                  _mapController.move(
+                                    const LatLng(19.7515, 75.7139),
+                                    _currentZoom,
+                                  );
+                                });
+                              },
+                            ),
+                          ),
+                          // Refresh Data
+                          AnimatedOpacity(
+                            opacity: 1.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: _buildControlButton(
+                              icon: CupertinoIcons.refresh_circled_solid,
+                              tooltip: 'Refresh Data',
+                              onPressed: () {
+                                _loadMaharashtraData();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text('Data refreshed'),
+                                    duration: const Duration(seconds: 2),
+                                    behavior: SnackBarBehavior.floating,
+                                    backgroundColor: AppColors.success,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          // Vertical divider
+                          Container(
+                            height: 32,
+                            width: 1,
+                            color: AppColors.darkCream.withOpacity(0.3),
+                          ),
+                          // Fullscreen
+                          AnimatedOpacity(
+                            opacity: 1.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: _buildControlButton(
+                              icon: CupertinoIcons.fullscreen,
+                              tooltip: 'Toggle Fullscreen',
+                              onPressed: () {},
+                            ),
+                          ),
+                          // Settings
+                          AnimatedOpacity(
+                            opacity: 1.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: _buildControlButton(
+                              icon: CupertinoIcons.settings_solid,
+                              tooltip: 'Map Settings',
+                              onPressed: () {},
+                            ),
+                          ),
+                        ],
+                        // Collapsed state - Menu icon
                         if (!_isBottomBarExpanded)
                           CupertinoButton(
                             padding: const EdgeInsets.symmetric(
@@ -690,8 +1165,8 @@ class _HomePageState extends State<HomePage> {
                                 setState(() => _isBottomBarExpanded = true),
                             child: Icon(
                               CupertinoIcons.line_horizontal_3,
-                              color: AppColors.darkVanilla,
-                              size: 20,
+                              color: AppColors.primaryBlue,
+                              size: 22,
                             ),
                           ),
                       ],
@@ -706,18 +1181,22 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildIconButton({
+  Widget _buildControlButton({
     required IconData icon,
+    required String tooltip,
     required VoidCallback? onPressed,
   }) {
-    return CupertinoButton(
-      padding: const EdgeInsets.all(8),
-      minSize: 40,
-      onPressed: onPressed,
-      child: Icon(
-        icon,
-        color: onPressed != null ? AppColors.charcoal : AppColors.mediumGray,
-        size: 24,
+    return Tooltip(
+      message: tooltip,
+      child: CupertinoButton(
+        padding: const EdgeInsets.all(8),
+        minSize: 44,
+        onPressed: onPressed,
+        child: Icon(
+          icon,
+          color: onPressed != null ? AppColors.primaryBlue : AppColors.mediumGray,
+          size: 22,
+        ),
       ),
     );
   }

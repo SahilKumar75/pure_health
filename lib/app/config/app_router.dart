@@ -33,8 +33,9 @@ CustomTransitionPage<T> smoothPage<T>({required Widget child}) =>
 
 /// Navigation configuration
 class AppRouter {
-  /// Navigation items for sidebar (Profile and Settings at bottom)
+  /// Navigation items for sidebar - Ordered by priority (Profile and Settings at bottom)
   static const List<Map<String, dynamic>> navigationItems = [
+    // High Priority Items
     {
       'icon': 'home',
       'label': 'Home',
@@ -48,17 +49,18 @@ class AppRouter {
       'route': '/dashboard',
     },
     {
-      'icon': 'history',
-      'label': 'History',
-      'index': 2,
-      'route': '/history',
-    },
-    {
       'icon': 'ai',
       'label': 'AI Analysis',
-      'index': 3,
+      'index': 2,
       'route': '/ai-analysis',
     },
+    {
+      'icon': 'history',
+      'label': 'History',
+      'index': 3,
+      'route': '/history',
+    },
+    // Bottom Section - User Settings
     {
       'icon': 'profile',
       'label': 'Profile',

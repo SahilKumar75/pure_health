@@ -19,7 +19,7 @@ class AIAnalysisPage extends StatefulWidget {
 }
 
 class _AIAnalysisPageState extends State<AIAnalysisPage> {
-  int _selectedIndex = 3; // AI Analysis index in sidebar
+  int _selectedIndex = 2; // AI Analysis index in sidebar (moved to priority position)
 
   @override
   Widget build(BuildContext context) {
@@ -38,19 +38,15 @@ class _AIAnalysisPageState extends State<AIAnalysisPage> {
             Expanded(
               child: Consumer<AIAnalysisViewModel>(
                 builder: (context, viewModel, _) {
-                  return Column(
-                    children: [
-                      // Header
-                      _buildHeader(context, viewModel),
-                      
-                      // Main Content
-                      Expanded(
-                        child: viewModel.hasReport
-                            ? AnalysisReportView(report: viewModel.currentReport!)
-                            : _buildUploadSection(context, viewModel),
-                      ),
-                    ],
-                  );
+                  return viewModel.hasReport
+                      ? AnalysisReportView(
+                          report: viewModel.currentReport!,
+                          onNewAnalysis: () => _clearAnalysis(context, viewModel),
+                          onGeneratePDF: () => _generatePDFReport(context, viewModel),
+                          onSaveReport: () => _saveReport(context, viewModel),
+                          isLoading: viewModel.isLoading,
+                        )
+                      : _buildUploadSection(context, viewModel);
                 },
               ),
             ),
@@ -60,157 +56,7 @@ class _AIAnalysisPageState extends State<AIAnalysisPage> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, AIAnalysisViewModel viewModel) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.darkBg2,
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.borderLight,
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Icon
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: GovernmentTheme.governmentBlue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Icon(
-                CupertinoIcons.graph_square_fill,
-                color: GovernmentTheme.governmentBlue,
-                size: 24,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          // Title and subtitle
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'AI Water Quality Analysis',
-                  style: AppTextStyles.heading2.copyWith(
-                    color: AppColors.lightText,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Upload data to get predictions, risk assessment, trends & recommendations',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.mediumText,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Actions
-          if (viewModel.hasReport) ...[
-            CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              onPressed: viewModel.isLoading
-                  ? null
-                  : () => _saveReport(context, viewModel),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: GovernmentTheme.governmentBlue,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      CupertinoIcons.floppy_disk,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Save Report',
-                      style: AppTextStyles.button.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              onPressed: viewModel.isLoading
-                  ? null
-                  : () => _generatePDFReport(context, viewModel),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.accentPink,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      CupertinoIcons.doc_text_fill,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Generate PDF',
-                      style: AppTextStyles.button.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              onPressed: () => _clearAnalysis(context, viewModel),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.darkBg3,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppColors.borderLight,
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      CupertinoIcons.arrow_clockwise,
-                      color: AppColors.lightText,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'New Analysis',
-                      style: AppTextStyles.button.copyWith(
-                        color: AppColors.lightText,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildUploadSection(BuildContext context, AIAnalysisViewModel viewModel) {
     return SingleChildScrollView(

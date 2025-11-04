@@ -5,13 +5,23 @@ import 'package:pure_health/core/theme/text_styles.dart';
 import 'package:pure_health/core/theme/government_theme.dart';
 import '../../data/models/analysis_report.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class AnalysisReportView extends StatefulWidget {
   final AnalysisReport report;
+  final VoidCallback onNewAnalysis;
+  final VoidCallback onGeneratePDF;
+  final VoidCallback onSaveReport;
+  final bool isLoading;
 
   const AnalysisReportView({
     super.key,
     required this.report,
+    required this.onNewAnalysis,
+    required this.onGeneratePDF,
+    required this.onSaveReport,
+    this.isLoading = false,
   });
 
   @override
@@ -23,108 +33,173 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 1400),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Report Header
-              _buildReportHeader(),
-              
-              const SizedBox(height: 24),
-              
-              // Tabs
-              _buildTabs(),
-              
-              const SizedBox(height: 24),
-              
-              // Tab Content
-              _buildTabContent(),
-            ],
+    return Column(
+      children: [
+        // Compact Action Bar
+        _buildActionBar(context),
+        
+        // Main Content with Tabs
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 1400),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Tabs
+                    _buildTabs(),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Tab Content
+                    _buildTabContent(),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildReportHeader() {
+  Widget _buildActionBar(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        color: AppColors.darkBg3,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.borderLight,
-          width: 1,
+        color: AppColors.darkBg2,
+        border: Border(
+          bottom: BorderSide(
+            color: AppColors.borderLight,
+            width: 1,
+          ),
         ),
       ),
       child: Row(
         children: [
+          // File Info
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
+                Icon(
+                  CupertinoIcons.doc_text_fill,
+                  color: GovernmentTheme.governmentBlue,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
                 Text(
-                  'Analysis Report',
-                  style: AppTextStyles.heading2.copyWith(
+                  widget.report.fileName,
+                  style: AppTextStyles.body.copyWith(
                     color: AppColors.lightText,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(
-                      CupertinoIcons.doc_text_fill,
-                      color: AppColors.mediumText,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      widget.report.fileName,
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.mediumText,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Icon(
-                      CupertinoIcons.time,
-                      color: AppColors.mediumText,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      DateFormat('MMM dd, yyyy HH:mm')
-                          .format(widget.report.timestamp),
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.mediumText,
-                      ),
-                    ),
-                  ],
-                ),
                 if (widget.report.location != null) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        CupertinoIcons.map_pin_ellipse,
-                        color: AppColors.mediumText,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        widget.report.location!.name,
-                        style: AppTextStyles.body.copyWith(
-                          color: AppColors.mediumText,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 16),
+                  Icon(
+                    CupertinoIcons.map_pin_ellipse,
+                    color: AppColors.mediumText,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    widget.report.location!.name,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.mediumText,
+                    ),
                   ),
                 ],
               ],
+            ),
+          ),
+          // Action Buttons
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: widget.isLoading ? null : widget.onSaveReport,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: GovernmentTheme.governmentBlue,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    CupertinoIcons.floppy_disk,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Save',
+                    style: AppTextStyles.button.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: widget.isLoading ? null : widget.onGeneratePDF,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.accentPink,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    CupertinoIcons.doc_text_fill,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'PDF',
+                    style: AppTextStyles.button.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: widget.onNewAnalysis,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.darkBg3,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.borderLight,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    CupertinoIcons.arrow_clockwise,
+                    color: AppColors.lightText,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'New',
+                    style: AppTextStyles.button.copyWith(
+                      color: AppColors.lightText,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -134,8 +209,7 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
 
   Widget _buildTabs() {
     final tabs = [
-      {'label': 'Overview', 'icon': CupertinoIcons.chart_pie_fill},
-      {'label': 'Predictions', 'icon': CupertinoIcons.graph_circle},
+      {'label': 'Data & Predictions', 'icon': CupertinoIcons.chart_bar_square_fill},
       {'label': 'Risk Assessment', 'icon': CupertinoIcons.exclamationmark_triangle_fill},
       {'label': 'Trends', 'icon': CupertinoIcons.chart_bar_alt_fill},
       {'label': 'Recommendations', 'icon': CupertinoIcons.lightbulb_fill},
@@ -195,39 +269,92 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
   Widget _buildTabContent() {
     switch (_selectedTab) {
       case 0:
-        return _buildOverviewTab();
+        return _buildDataAndPredictionsTab();
       case 1:
-        return _buildPredictionsTab();
-      case 2:
         return _buildRiskAssessmentTab();
-      case 3:
+      case 2:
         return _buildTrendsTab();
-      case 4:
+      case 3:
         return _buildRecommendationsTab();
       default:
         return const SizedBox.shrink();
     }
   }
 
-  Widget _buildOverviewTab() {
+  Widget _buildDataAndPredictionsTab() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Hero Section - Predictions Showcase
+        Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                GovernmentTheme.governmentBlue.withOpacity(0.2),
+                Colors.purple.withOpacity(0.1),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: GovernmentTheme.governmentBlue.withOpacity(0.3),
+              width: 2,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: GovernmentTheme.governmentBlue,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      CupertinoIcons.chart_bar_square_fill,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '60-Day Water Quality Forecast',
+                          style: AppTextStyles.heading2.copyWith(
+                            color: AppColors.lightText,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'AI-powered predictions from ${DateFormat('MMM dd').format(widget.report.predictionStartDate)} to ${DateFormat('MMM dd, yyyy').format(widget.report.predictionEndDate)}',
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.mediumText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Quick Stats Row
         Row(
           children: [
             Expanded(
-              child: _buildOverviewCard(
-                icon: CupertinoIcons.graph_circle,
-                title: 'Prediction Period',
-                value: '2 Months',
-                subtitle: '${DateFormat('MMM dd').format(widget.report.predictionStartDate)} - '
-                    '${DateFormat('MMM dd, yyyy').format(widget.report.predictionEndDate)}',
-                color: Colors.blue,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildOverviewCard(
+              child: _buildStatCard(
                 icon: CupertinoIcons.exclamationmark_shield_fill,
                 title: 'Risk Level',
                 value: widget.report.riskAssessment.overallRiskLevel.toUpperCase(),
@@ -235,13 +362,9 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
                 color: _getRiskColor(widget.report.riskAssessment.overallRiskLevel),
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
+            const SizedBox(width: 16),
             Expanded(
-              child: _buildOverviewCard(
+              child: _buildStatCard(
                 icon: CupertinoIcons.arrow_up_right,
                 title: 'Overall Trend',
                 value: widget.report.trendAnalysis.overallTrend.toUpperCase(),
@@ -251,16 +374,27 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: _buildOverviewCard(
+              child: _buildStatCard(
                 icon: CupertinoIcons.list_bullet,
-                title: 'Recommendations',
+                title: 'Actions',
                 value: '${widget.report.recommendations.length}',
-                subtitle: 'Action items identified',
+                subtitle: 'Recommendations',
                 color: Colors.purple,
               ),
             ),
           ],
         ),
+        
+        const SizedBox(height: 24),
+        
+        // Uploaded Data Section
+        _buildUploadedDataSection(),
+        
+        const SizedBox(height: 24),
+        
+        // Predictions by Parameter
+        _buildPredictionsByParameter(),
+        
         const SizedBox(height: 24),
         
         // Location Map (if location exists)
@@ -269,8 +403,8 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
       ],
     );
   }
-
-  Widget _buildOverviewCard({
+  
+  Widget _buildStatCard({
     required IconData icon,
     required String title,
     required String value,
@@ -301,33 +435,258 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
                 child: Icon(icon, color: color, size: 24),
               ),
               const SizedBox(width: 12),
-              Text(
-                title,
-                style: AppTextStyles.body.copyWith(
-                  color: AppColors.mediumText,
+              Flexible(
+                child: Text(
+                  title,
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.mediumText,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             value,
-            style: AppTextStyles.heading2.copyWith(
+            style: AppTextStyles.heading3.copyWith(
               color: AppColors.lightText,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             subtitle,
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.dimText,
+              color: AppColors.mediumText,
             ),
           ),
         ],
       ),
     );
   }
+  
+  Widget _buildUploadedDataSection() {
+    if (widget.report.rawData == null || widget.report.rawData!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.darkBg3,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.borderLight,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                CupertinoIcons.chart_bar_fill,
+                color: Colors.blue,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Uploaded Data Summary',
+                style: AppTextStyles.heading3.copyWith(
+                  color: AppColors.lightText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildDataSummaryGrid(),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildDataSummaryGrid() {
+    // Extract key parameters from rawData
+    final rawData = widget.report.rawData!;
+    final parameters = <String, dynamic>{};
+    
+    // Common water quality parameters to display
+    final displayParams = ['pH', 'Turbidity', 'DO', 'BOD', 'Temperature', 'Conductivity', 'Nitrate', 'Fecal_Coliform'];
+    
+    for (final param in displayParams) {
+      if (rawData.containsKey(param)) {
+        parameters[param] = rawData[param];
+      }
+    }
+    
+    if (parameters.isEmpty) {
+      return Text(
+        'No parameter data available',
+        style: AppTextStyles.body.copyWith(
+          color: AppColors.mediumText,
+        ),
+      );
+    }
+    
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: parameters.entries.map((entry) {
+        return Container(
+          width: (MediaQuery.of(context).size.width - 200) / 4 - 20,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.darkBg2,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: AppColors.borderLight,
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                entry.key,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.mediumText,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                entry.value.toString(),
+                style: AppTextStyles.heading3.copyWith(
+                  color: AppColors.lightText,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+  
+  Widget _buildPredictionsByParameter() {
+    final predictions = widget.report.predictions;
+    
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.darkBg3,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.borderLight,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                CupertinoIcons.graph_circle_fill,
+                color: Colors.green,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Parameter Predictions',
+                style: AppTextStyles.heading3.copyWith(
+                  color: AppColors.lightText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildPredictionsGrid(predictions),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildPredictionsGrid(Map<String, dynamic> predictions) {
+    if (predictions.isEmpty) {
+      return Text(
+        'No prediction data available',
+        style: AppTextStyles.body.copyWith(
+          color: AppColors.mediumText,
+        ),
+      );
+    }
+    
+    return Column(
+      children: predictions.entries.map((entry) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.darkBg2,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: AppColors.borderLight,
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                entry.key,
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.lightText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (entry.value is Map) _buildPredictionDetails(entry.value as Map<String, dynamic>)
+              else Text(
+                entry.value.toString(),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.mediumText,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+  
+  Widget _buildPredictionDetails(Map<String, dynamic> details) {
+    return Wrap(
+      spacing: 24,
+      runSpacing: 8,
+      children: details.entries.take(6).map((entry) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${entry.key}: ',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.mediumText,
+              ),
+            ),
+            Text(
+              entry.value.toString(),
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.lightText,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+
 
   Widget _buildLocationSection() {
     final location = widget.report.location!;
@@ -389,57 +748,19 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
                   ],
                 ),
               ),
-              // Map Placeholder
+              // Actual Map
               Container(
-                width: 200,
-                height: 200,
+                width: 300,
+                height: 250,
                 decoration: BoxDecoration(
-                  color: AppColors.darkBg2,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: AppColors.borderLight,
                     width: 1,
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            CupertinoIcons.map_fill,
-                            color: AppColors.mediumText,
-                            size: 48,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Map View',
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.mediumText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: GovernmentTheme.governmentBlue,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Icon(
-                          CupertinoIcons.location_fill,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                clipBehavior: Clip.antiAlias,
+                child: _buildMapWidget(location.latitude, location.longitude),
               ),
             ],
           ),
@@ -474,49 +795,47 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
       ),
     );
   }
-
-  Widget _buildPredictionsTab() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.darkBg3,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.borderLight,
-          width: 1,
+  
+  Widget _buildMapWidget(double latitude, double longitude) {
+    return FlutterMap(
+      options: MapOptions(
+        initialCenter: LatLng(latitude, longitude),
+        initialZoom: 12.0,
+        interactionOptions: const InteractionOptions(
+          flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '2-Month Predictions',
-            style: AppTextStyles.heading3.copyWith(
-              color: AppColors.lightText,
-              fontWeight: FontWeight.w600,
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.purehealth.app',
+        ),
+        MarkerLayer(
+          markers: [
+            Marker(
+              point: LatLng(latitude, longitude),
+              width: 40,
+              height: 40,
+              child: Icon(
+                CupertinoIcons.location_solid,
+                color: GovernmentTheme.governmentBlue,
+                size: 40,
+                shadows: const [
+                  Shadow(
+                    color: Colors.black54,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Forecast from ${DateFormat('MMM dd').format(widget.report.predictionStartDate)} to '
-            '${DateFormat('MMM dd, yyyy').format(widget.report.predictionEndDate)}',
-            style: AppTextStyles.body.copyWith(
-              color: AppColors.mediumText,
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          // Predictions content
-          Text(
-            'Detailed predictions will be displayed here with charts and parameter forecasts.',
-            style: AppTextStyles.body.copyWith(
-              color: AppColors.mediumText,
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
+
+
 
   Widget _buildRiskAssessmentTab() {
     final riskAssessment = widget.report.riskAssessment;
