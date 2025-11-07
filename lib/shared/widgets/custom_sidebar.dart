@@ -8,11 +8,13 @@ import '../../../core/theme/text_styles.dart';
 class CustomSidebar extends StatefulWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
+  final ValueChanged<bool>? onExpansionChanged;
 
   const CustomSidebar({
     super.key,
     required this.selectedIndex,
     required this.onItemSelected,
+    this.onExpansionChanged,
   });
 
   @override
@@ -20,7 +22,7 @@ class CustomSidebar extends StatefulWidget {
 }
 
 class _CustomSidebarState extends State<CustomSidebar> {
-  bool isExpanded = false;
+  bool isExpanded = true; // Changed to true for expanded by default
 
   void _handleNavigation(int index) {
     try {
@@ -38,6 +40,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
     setState(() {
       isExpanded = !isExpanded;
     });
+    widget.onExpansionChanged?.call(isExpanded);
   }
 
   Widget _buildNavItem({
@@ -226,9 +229,9 @@ class _CustomSidebarState extends State<CustomSidebar> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                CupertinoIcons.sidebar_left,
+                                Icons.menu_open,
                                 color: AppColors.primaryBlue,
-                                size: 18,
+                                size: 20,
                               ),
                               const SizedBox(width: 12),
                               Flexible(
@@ -246,9 +249,9 @@ class _CustomSidebarState extends State<CustomSidebar> {
                           )
                         : Center(
                             child: Icon(
-                              CupertinoIcons.bars,
+                              Icons.menu,
                               color: AppColors.primaryBlue,
-                              size: 18,
+                              size: 20,
                             ),
                           ),
                   ),
@@ -268,12 +271,13 @@ class _CustomSidebarState extends State<CustomSidebar> {
                       itemBuilder: (context, index) {
                         final item = AppRouter.navigationItems[index];
                         final iconMap = {
-                          'home': CupertinoIcons.home,
-                          'dashboard': CupertinoIcons.chart_bar_fill,
-                          'history': CupertinoIcons.time,
-                          'settings': CupertinoIcons.settings,
-                          'ai': CupertinoIcons.sparkles,
-                          'profile': CupertinoIcons.person_circle,
+                          'home': Icons.home_outlined,
+                          'dashboard': Icons.dashboard_outlined,
+                          'live_monitoring': Icons.sensors_outlined,
+                          'history': Icons.description_outlined,
+                          'settings': Icons.settings_outlined,
+                          'ai': Icons.forum_outlined,
+                          'profile': Icons.person_outline,
                         };
 
                         final shortcutMap = {
@@ -287,7 +291,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
                         };
 
                         return _buildNavItem(
-                          icon: iconMap[item['icon']] ?? CupertinoIcons.home,
+                          icon: iconMap[item['icon']] ?? Icons.home_outlined,
                           label: item['label'] as String,
                           index: item['index'] as int,
                           shortcut: shortcutMap[item['index'] as int],
@@ -313,12 +317,13 @@ class _CustomSidebarState extends State<CustomSidebar> {
                       .skip(AppRouter.navigationItems.length - 2) // Last 2 items
                       .map((item) {
                     final iconMap = {
-                      'home': CupertinoIcons.home,
-                      'dashboard': CupertinoIcons.chart_bar_fill,
-                      'history': CupertinoIcons.time,
-                      'settings': CupertinoIcons.settings,
-                      'ai': CupertinoIcons.sparkles,
-                      'profile': CupertinoIcons.person_circle,
+                      'home': Icons.home_outlined,
+                      'dashboard': Icons.dashboard_outlined,
+                      'live_monitoring': Icons.sensors_outlined,
+                      'history': Icons.description_outlined,
+                      'settings': Icons.settings_outlined,
+                      'ai': Icons.forum_outlined,
+                      'profile': Icons.person_outline,
                     };
 
                     final shortcutMap = {
@@ -332,7 +337,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
                     };
 
                     return _buildNavItem(
-                      icon: iconMap[item['icon']] ?? CupertinoIcons.home,
+                      icon: iconMap[item['icon']] ?? Icons.home_outlined,
                       label: item['label'] as String,
                       index: item['index'] as int,
                       shortcut: shortcutMap[item['index'] as int],

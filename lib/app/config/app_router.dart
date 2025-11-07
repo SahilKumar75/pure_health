@@ -7,6 +7,7 @@ import 'package:pure_health/features/history/history_report_page.dart';
 import 'package:pure_health/features/settings/presentation/pages/settings_page.dart';
 import 'package:pure_health/features/ai_analysis/presentation/pages/ai_analysis_page.dart';
 import 'package:pure_health/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:pure_health/features/live_monitoring/presentation/pages/live_monitoring_page.dart';
 
 /// Custom smooth page transition with fade + slide effect
 CustomTransitionPage<T> smoothPage<T>({required Widget child}) =>
@@ -49,28 +50,34 @@ class AppRouter {
       'route': '/dashboard',
     },
     {
+      'icon': 'live_monitoring',
+      'label': 'Live Monitoring',
+      'index': 2,
+      'route': '/live-monitoring',
+    },
+    {
       'icon': 'ai',
       'label': 'AI Analysis',
-      'index': 2,
+      'index': 3,
       'route': '/ai-analysis',
     },
     {
       'icon': 'history',
       'label': 'History',
-      'index': 3,
+      'index': 4,
       'route': '/history',
     },
     // Bottom Section - User Settings
     {
       'icon': 'profile',
       'label': 'Profile',
-      'index': 4,
+      'index': 5,
       'route': '/profile',
     },
     {
       'icon': 'settings',
       'label': 'Settings',
-      'index': 5,
+      'index': 6,
       'route': '/settings',
     },
   ];
@@ -151,6 +158,14 @@ class AppRouter {
             name: 'dashboard',
             pageBuilder: (context, state) =>
                 smoothPage(child: const DashboardPage()),
+          ),
+
+          // Live Monitoring
+          GoRoute(
+            path: '/live-monitoring',
+            name: 'live-monitoring',
+            pageBuilder: (context, state) =>
+                smoothPage(child: const LiveMonitoringPage()),
           ),
 
           // AI Analysis

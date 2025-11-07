@@ -6,9 +6,9 @@ import 'package:pure_health/shared/widgets/custom_sidebar.dart';
 import 'package:pure_health/shared/widgets/custom_map_widget.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:pure_health/core/data/maharashtra_water_data.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
+import 'package:pure_health/core/services/water_quality_api_service.dart';
 
 // Pulsing location dot widget
 class PulsingLocationDot extends StatefulWidget {
@@ -108,11 +108,16 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   bool _isBottomBarExpanded = false;
+  bool _isSidebarExpanded = true; // Track sidebar expansion state (default expanded)
   late final MapController _mapController;
   double _currentZoom = 7.0; // Lower zoom to show all of Maharashtra
   
+  // API Service
+  final WaterQualityApiService _apiService = WaterQualityApiService();
+  
   // Real-time data
-  Map<String, Map<String, dynamic>> _stationData = {};
+  List<WaterQualityStation> _stations = [];
+  Map<String, StationData> _stationData = {};
   Timer? _dataUpdateTimer;
   int _totalStations = 0;
   int _activeAlerts = 0;
@@ -122,29 +127,54 @@ class _HomePageState extends State<HomePage> {
   DateTime _lastDataFetch = DateTime.now();
   String? _selectedStationId;
   LatLng? _userLocation; // User's current location
+  bool _isLoading = true;
+  String? _errorMessage;
+  
+  // Filters
+  String? _selectedDistrict;
+  String? _selectedType;
+  List<String> _availableDistricts = [];
+
+  // Safe setState wrapper
+  void _safeSetState(VoidCallback fn) {
+    if (mounted) {
+      setState(fn);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
-    _loadMaharashtraData();
-    _startDataUpdates();
-    _getUserLocation();
+    
+    // Delay initial data load to ensure widget tree is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadMaharashtraData();
+        _startDataUpdates();
+        _getUserLocation();
+      }
+    });
   }
 
   /// Get user's current location
   Future<void> _getUserLocation() async {
+    if (!mounted) return;
+    
     try {
       // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
+        if (!mounted) return;
         // Location services are not enabled, use fallback
         const fallbackLoc = LatLng(18.5204, 73.8567); // Pune, Maharashtra
         setState(() {
           _userLocation = fallbackLoc;
         });
         Future.delayed(const Duration(milliseconds: 500), () {
-          _mapController.move(fallbackLoc, 10.0);
+          if (mounted) {
+            _mapController.move(fallbackLoc, 10.0);
+          }
         });
         return;
       }
@@ -186,25 +216,33 @@ class _HomePageState extends State<HomePage> {
         ),
       );
       
+      if (!mounted) return;
+      
       final userLoc = LatLng(position.latitude, position.longitude);
       
-      setState(() {
+      _safeSetState(() {
         _userLocation = userLoc;
       });
       
       // Center map on user's actual location
       Future.delayed(const Duration(milliseconds: 500), () {
-        _mapController.move(userLoc, 12.0); // Zoom level 12 for closer view
+        if (mounted) {
+          _mapController.move(userLoc, 12.0); // Zoom level 12 for closer view
+        }
       });
     } catch (e) {
+      if (!mounted) return;
+      
       // Error getting location, use fallback
       const fallbackLoc = LatLng(18.5204, 73.8567); // Pune, Maharashtra
-      setState(() {
+      _safeSetState(() {
         _userLocation = fallbackLoc;
       });
       
       Future.delayed(const Duration(milliseconds: 500), () {
-        _mapController.move(fallbackLoc, 10.0);
+        if (mounted) {
+          _mapController.move(fallbackLoc, 10.0);
+        }
       });
     }
   }
@@ -216,38 +254,106 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  void _loadMaharashtraData() {
-    final allStations = MaharashtraWaterData.getAllStations();
+  Future<void> _loadMaharashtraData() async {
+    if (!mounted) return;
     
-    setState(() {
-      _totalStations = allStations.length;
-      _lastDataFetch = DateTime.now();
+    _safeSetState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Fetch stations with map data (includes GPS and basic info)
+      final mapResponse = await _apiService.getMapData(
+        perPage: 5000, // Get all stations in one call
+        district: _selectedDistrict,
+        type: _selectedType,
+        minimal: false, // Get full data including current readings
+      );
+
+      if (!mounted) return;
+
+      // Parse stations from response
+      final stationsJson = mapResponse['stations'] as List;
       
-      // Generate sample data for each station
-      for (var station in allStations) {
-        final samples = MaharashtraWaterQualityData.generateSamplesForStation(
-          station,
-          sampleCount: 1,
+      // For now, create mock StationData since API doesn't return full current_data
+      // TODO: Update when backend API includes full parameter data
+      _stations = [];
+      _stationData.clear();
+      
+      for (final stationJson in stationsJson) {
+        // Parse station
+        final station = WaterQualityStation.fromJson({
+          'id': stationJson['id'],
+          'name': stationJson['name'],
+          'type': stationJson['type'],
+          'monitoringType': 'baseline',
+          'district': 'Maharashtra', // Default since not in minimal response
+          'region': 'Western',
+          'latitude': stationJson['latitude'],
+          'longitude': stationJson['longitude'],
+          'laboratory': 'MPCB',
+          'samplingFrequency': 'Monthly',
+        });
+        _stations.add(station);
+        
+        // Create basic StationData from the minimal response
+        _stationData[station.id] = StationData(
+          stationId: station.id,
+          timestamp: DateTime.now().toIso8601String(),
+          wqi: (stationJson['wqi'] ?? 50.0).toDouble(),
+          status: stationJson['status'] ?? 'Unknown',
+          waterQualityClass: stationJson['waterClass'] ?? 'Unknown',
+          parameters: {
+            'pH': 7.0,
+            'DO': 6.0,
+            'BOD': 3.0,
+            'temperature': 25.0,
+          },
+          alerts: stationJson['hasAlerts'] == true ? [
+            {'severity': 'medium', 'message': '${stationJson['alertCount'] ?? 0} active alerts'}
+          ] : [],
         );
-        if (samples.isNotEmpty) {
-          final sample = samples.first;
-          _stationData[station.id] = {
-            'pH': sample['pH'] as double,
-            'turbidity': sample['turbidity'] as double,
-            'dissolvedOxygen': sample['dissolvedOxygen'] as double,
-            'temperature': sample['temperature'] as double,
-            'status': sample['status'] as String,
-            'latitude': station.latitude,
-            'longitude': station.longitude,
-            'name': station.displayName,
-            'stationType': station.stationType,
-            'timestamp': _lastDataFetch,
-          };
-        }
       }
       
-      _updateStats();
-    });
+      _safeSetState(() {
+        _totalStations = _stations.length;
+        _lastDataFetch = DateTime.now();
+
+        // Get unique districts for filter
+        _availableDistricts = _stations
+            .map((s) => s.district)
+            .toSet()
+            .toList()
+          ..sort();
+        
+        _updateStats();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      
+      _safeSetState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to load stations: ${e.toString()}';
+      });
+      
+      // Show error snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading stations: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _loadMaharashtraData,
+            ),
+          ),
+        );
+      }
+    }
   }
 
   String _getTimeAgo(DateTime timestamp) {
@@ -267,20 +373,23 @@ class _HomePageState extends State<HomePage> {
     int safe = 0, warning = 0, critical = 0;
     
     _stationData.forEach((key, data) {
-      switch (data['status']) {
-        case 'Safe':
+      switch (data.status.toLowerCase()) {
+        case 'safe':
+        case 'good':
           safe++;
           break;
-        case 'Warning':
+        case 'warning':
+        case 'moderate':
           warning++;
           break;
-        case 'Critical':
+        case 'critical':
+        case 'poor':
           critical++;
           break;
       }
     });
     
-    setState(() {
+    _safeSetState(() {
       _safeCount = safe;
       _warningCount = warning;
       _criticalCount = critical;
@@ -289,8 +398,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _startDataUpdates() {
+    _dataUpdateTimer?.cancel(); // Cancel any existing timer
     _dataUpdateTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      _loadMaharashtraData();
+      if (mounted) {
+        _loadMaharashtraData();
+      } else {
+        timer.cancel(); // Cancel if widget is disposed
+      }
     });
   }
 
@@ -310,41 +424,34 @@ class _HomePageState extends State<HomePage> {
     }
     
     // Add MPCB monitoring station markers
-    _stationData.forEach((stationId, data) {
-      final lat = data['latitude'] as double;
-      final lon = data['longitude'] as double;
-      final status = data['status'] as String;
-      final timestamp = data['timestamp'] as DateTime;
-      final name = data['name'] as String;
-      final stationType = data['stationType'] as String;
+    for (final station in _stations) {
+      final data = _stationData[station.id];
+      if (data == null) continue; // Skip if no data available
+      
+      final lat = station.latitude;
+      final lon = station.longitude;
+      final status = data.status;
+      final timestamp = DateTime.parse(data.timestamp);
+      final name = station.name;
+      final stationType = station.type;
       
       // Status colors following MPCB standards
       Color markerColor;
-      Color backgroundColor;
       
-      switch (status) {
-        case 'Safe':
-          markerColor = const Color(0xFF10B981); // Green - Safe
-          backgroundColor = const Color(0xFF10B981).withOpacity(0.2);
-          break;
-        case 'Warning':
-          markerColor = const Color(0xFFF59E0B); // Amber - Caution
-          backgroundColor = const Color(0xFFF59E0B).withOpacity(0.2);
-          break;
-        case 'Critical':
-          markerColor = const Color(0xFFEF4444); // Red - Alert
-          backgroundColor = const Color(0xFFEF4444).withOpacity(0.2);
-          break;
-        default:
-          markerColor = AppColors.charcoal;
-          backgroundColor = AppColors.charcoal.withOpacity(0.2);
+      final statusLower = status.toLowerCase();
+      if (statusLower == 'safe' || statusLower == 'good' || statusLower == 'excellent') {
+        markerColor = const Color(0xFF10B981); // Green - Safe
+      } else if (statusLower == 'warning' || statusLower == 'moderate') {
+        markerColor = const Color(0xFFF59E0B); // Amber - Caution
+      } else {
+        markerColor = const Color(0xFFEF4444); // Red - Alert
       }
       
       markers.add(
         Marker(
           point: LatLng(lat, lon),
-          width: 56,
-          height: 56,
+          width: 20,  // Much smaller - was 56
+          height: 20, // Much smaller - was 56
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             child: Tooltip(
@@ -362,42 +469,28 @@ class _HomePageState extends State<HomePage> {
               ),
               child: GestureDetector(
                 onTap: () {
-                  setState(() {
-                    _selectedStationId = stationId;
+                  _safeSetState(() {
+                    _selectedStationId = station.id;
                   });
                 },
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Outer glow/pulse effect
+                    // Main station marker - simple dot
                     Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: backgroundColor,
-                      ),
-                    ),
-                    // Main station marker
-                    Container(
-                      width: 36,
-                      height: 36,
+                      width: 12,  // Smaller marker
+                      height: 12,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: markerColor,
-                        border: Border.all(color: Colors.white, width: 2.5),
+                        border: Border.all(color: Colors.white, width: 1.5),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
+                            color: markerColor.withOpacity(0.4),
+                            blurRadius: 4,
+                            spreadRadius: 1,
                           ),
                         ],
-                      ),
-                      child: Icon(
-                        Icons.water_drop,
-                        color: Colors.white,
-                        size: 20,
                       ),
                     ),
                   ],
@@ -407,7 +500,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       );
-    });
+    }
     
     return markers;
   }
@@ -570,13 +663,13 @@ class _HomePageState extends State<HomePage> {
     final stationData = _stationData[_selectedStationId];
     if (stationData == null) return const SizedBox.shrink();
     
-    final status = stationData['status'] as String;
-    // Station name is shown in the panel header above
-    final pH = stationData['pH'] as double;
-    final turbidity = stationData['turbidity'] as double;
-    final dissolvedOxygen = stationData['dissolvedOxygen'] as double;
-    final temperature = stationData['temperature'] as double;
-    final timestamp = stationData['timestamp'] as DateTime;
+    final status = stationData.status;
+    // Get parameters from the data
+    final pH = stationData.parameters['pH'] as double?;
+    final turbidity = stationData.parameters['turbidity'] as double?;
+    final dissolvedOxygen = stationData.parameters['dissolvedOxygen'] as double?;
+    final temperature = stationData.parameters['temperature'] as double?;
+    final timestamp = DateTime.parse(stationData.timestamp);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -616,13 +709,13 @@ class _HomePageState extends State<HomePage> {
         // Current Readings
         _buildSectionHeader('Current Readings', Icons.analytics),
         const SizedBox(height: 16),
-                _buildReadingCard('pH Level', pH.toStringAsFixed(2), 'Neutral: 6.5-8.5', Icons.water_drop),
+                _buildReadingCard('pH Level', pH?.toStringAsFixed(2) ?? 'N/A', 'Neutral: 6.5-8.5', Icons.water_drop),
                 const SizedBox(height: 12),
-                _buildReadingCard('Turbidity', '${turbidity.toStringAsFixed(2)} NTU', 'Max: 5 NTU', Icons.blur_on),
+                _buildReadingCard('Turbidity', turbidity != null ? '${turbidity.toStringAsFixed(2)} NTU' : 'N/A', 'Max: 5 NTU', Icons.blur_on),
                 const SizedBox(height: 12),
-                _buildReadingCard('Dissolved Oxygen', '${dissolvedOxygen.toStringAsFixed(2)} mg/L', 'Min: 4 mg/L', Icons.air),
+                _buildReadingCard('Dissolved Oxygen', dissolvedOxygen != null ? '${dissolvedOxygen.toStringAsFixed(2)} mg/L' : 'N/A', 'Min: 4 mg/L', Icons.air),
                 const SizedBox(height: 12),
-                _buildReadingCard('Temperature', '${temperature.toStringAsFixed(1)}°C', 'Normal: 20-30°C', Icons.thermostat),
+                _buildReadingCard('Temperature', temperature != null ? '${temperature.toStringAsFixed(1)}°C' : 'N/A', 'Normal: 20-30°C', Icons.thermostat),
                 
                 const SizedBox(height: 24),
                 
@@ -844,12 +937,19 @@ class _HomePageState extends State<HomePage> {
                   _selectedIndex = index;
                 });
               },
+              onExpansionChanged: (bool isExpanded) {
+                setState(() {
+                  _isSidebarExpanded = isExpanded;
+                });
+              },
             ),
           ),
 
           // Compact Logo positioned beside sidebar at top left
-          Positioned(
-            left: 96,
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            left: _isSidebarExpanded ? 224 : 96, // 200px (expanded) or 72px (collapsed) + 24px margin
             top: 24,
             child: Container(
               padding: const EdgeInsets.all(12),
@@ -937,7 +1037,7 @@ class _HomePageState extends State<HomePage> {
                             children: [
                               Text(
                                 _selectedStationId != null 
-                                    ? (_stationData[_selectedStationId]?['name'] as String? ?? 'Station Details')
+                                    ? (_stations.firstWhere((s) => s.id == _selectedStationId, orElse: () => _stations.first).name)
                                     : 'PureHealth',
                                 style: AppTextStyles.heading3.copyWith(
                                   color: AppColors.charcoal,
@@ -968,6 +1068,150 @@ class _HomePageState extends State<HomePage> {
                     if (_selectedStationId != null) 
                       _buildStationDetailsPanel()
                     else ...[
+                      // Filters Section
+                      _buildSectionHeader('Filters', Icons.filter_list),
+                      const SizedBox(height: 16),
+                      
+                      // District filter
+                      Focus(
+                        skipTraversal: true,
+                        canRequestFocus: false,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.lightCream,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.darkCream.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String?>(
+                              isExpanded: true,
+                              value: _selectedDistrict,
+                              hint: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  'All Districts',
+                                  style: AppTextStyles.body.copyWith(
+                                    color: AppColors.mediumGray,
+                                  ),
+                                ),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              borderRadius: BorderRadius.circular(12),
+                              items: [
+                                DropdownMenuItem<String?>(
+                                  value: null,
+                                  child: Text('All Districts', style: AppTextStyles.body),
+                                ),
+                                ..._availableDistricts.map((district) => DropdownMenuItem<String?>(
+                                  value: district,
+                                  child: Text(district, style: AppTextStyles.body),
+                                )),
+                              ],
+                              onChanged: (value) {
+                                _safeSetState(() {
+                                  _selectedDistrict = value;
+                                });
+                                _loadMaharashtraData();
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 12),
+                      
+                      // Type filter
+                      Focus(
+                        skipTraversal: true,
+                        canRequestFocus: false,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.lightCream,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.darkCream.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String?>(
+                              isExpanded: true,
+                              value: _selectedType,
+                              hint: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  'All Types',
+                                  style: AppTextStyles.body.copyWith(
+                                    color: AppColors.mediumGray,
+                                  ),
+                                ),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              borderRadius: BorderRadius.circular(12),
+                              items: [
+                                DropdownMenuItem<String?>(
+                                  value: null,
+                                  child: Text('All Types', style: AppTextStyles.body),
+                                ),
+                                DropdownMenuItem<String?>(
+                                  value: 'Surface Water',
+                                  child: Text('Surface Water', style: AppTextStyles.body),
+                                ),
+                                DropdownMenuItem<String?>(
+                                  value: 'Groundwater',
+                                  child: Text('Groundwater', style: AppTextStyles.body),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                _safeSetState(() {
+                                  _selectedType = value;
+                                });
+                                _loadMaharashtraData();
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      
+                      // Clear filters button
+                      if (_selectedDistrict != null || _selectedType != null) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              _safeSetState(() {
+                                _selectedDistrict = null;
+                                _selectedType = null;
+                              });
+                              _loadMaharashtraData();
+                            },
+                            icon: const Icon(Icons.clear, size: 18),
+                            label: const Text('Clear Filters'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.lightCream,
+                              foregroundColor: AppColors.primaryBlue,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: AppColors.primaryBlue.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      
+                      const SizedBox(height: 20),
+                      Divider(height: 1, color: AppColors.darkCream.withOpacity(0.4)),
+                      const SizedBox(height: 20),
+                      
                       // System Status Section
                       _buildSectionHeader('System Status', Icons.analytics_outlined),
                     const SizedBox(height: 16),
@@ -1176,6 +1420,37 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
+          
+          // Loading overlay
+          if (_isLoading)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.5),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Loading stations...',
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.charcoal,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

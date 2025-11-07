@@ -262,19 +262,22 @@ class _ChatPageState extends State<ChatPage> {
       },
     ];
 
-    return Wrap(
-      spacing: 16,
-      runSpacing: 16,
-      alignment: WrapAlignment.center,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: suggestions.map((suggestion) {
-        return _buildSuggestionCard(
-          icon: suggestion['icon']!,
-          title: suggestion['title']!,
-          description: suggestion['description']!,
-          onTap: () {
-            viewModel.messageController.text = suggestion['prompt']!;
-            _sendMessage(viewModel);
-          },
+        return Flexible(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: _buildSuggestionCard(
+              icon: suggestion['icon']!,
+              title: suggestion['title']!,
+              description: suggestion['description']!,
+              onTap: () {
+                viewModel.messageController.text = suggestion['prompt']!;
+                _sendMessage(viewModel);
+              },
+            ),
+          ),
         );
       }).toList(),
     );
@@ -290,7 +293,6 @@ class _ChatPageState extends State<ChatPage> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        width: 200,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.darkBg3,
@@ -302,6 +304,7 @@ class _ChatPageState extends State<ChatPage> {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(icon, style: const TextStyle(fontSize: 24)),
             const SizedBox(height: 12),
@@ -321,6 +324,8 @@ class _ChatPageState extends State<ChatPage> {
                 fontSize: 12,
                 height: 1.4,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

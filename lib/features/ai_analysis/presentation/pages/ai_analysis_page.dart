@@ -198,46 +198,51 @@ class _AIAnalysisPageState extends State<AIAnalysisPage> {
           ),
         ),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
+        Row(
           children: features.map((feature) {
-            return Container(
-              width: 280,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.darkBg3,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.borderLight,
-                  width: 1,
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.darkBg3,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.borderLight,
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        feature['icon'] as IconData,
+                        color: GovernmentTheme.governmentBlue,
+                        size: 32,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        feature['title'] as String,
+                        style: AppTextStyles.heading4.copyWith(
+                          color: AppColors.lightText,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        feature['description'] as String,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.mediumText,
+                          height: 1.5,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    feature['icon'] as IconData,
-                    color: GovernmentTheme.governmentBlue,
-                    size: 32,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    feature['title'] as String,
-                    style: AppTextStyles.heading4.copyWith(
-                      color: AppColors.lightText,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    feature['description'] as String,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.mediumText,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
               ),
             );
           }).toList(),
