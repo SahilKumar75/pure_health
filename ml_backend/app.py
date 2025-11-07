@@ -8,6 +8,7 @@ import json
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
+import hashlib
 
 app = Flask(__name__)
 
@@ -16,11 +17,15 @@ CORS(app, resources={
     r"/api/*": {
         "origins": "*",
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "Accept"],
-        "expose_headers": ["Content-Type"],
+        "allow_headers": ["Content-Type", "Authorization", "Accept", "If-None-Match"],
+        "expose_headers": ["Content-Type", "ETag", "Cache-Control"],
         "supports_credentials": False
     }
 })
+
+# Response cache for frequently accessed data
+response_cache = {}
+cache_ttl = 60  # Cache for 60 seconds
 
 # Initialize services
 ai_analysis = AIAnalysisService()
@@ -37,13 +42,49 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['REPORTS_FOLDER'] = REPORTS_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+# ============================================
+# CACHING & OPTIMIZATION HELPERS
+# ============================================
+
+def generate_etag(data):
+    """Generate ETag from data for cache validation"""
+    json_str = json.dumps(data, sort_keys=True)
+    return hashlib.md5(json_str.encode()).hexdigest()
+
+def get_cached_response(cache_key):
+    """Get cached response if available and not expired"""
+    if cache_key in response_cache:
+        cached_data, cached_time = response_cache[cache_key]
+        if (datetime.now() - cached_time).total_seconds() < cache_ttl:
+            return cached_data
+    return None
+
+def set_cached_response(cache_key, data):
+    """Cache response with timestamp"""
+    response_cache[cache_key] = (data, datetime.now())
+
+def check_etag_match(data):
+    """Check if client has cached version (ETag match)"""
+    client_etag = request.headers.get('If-None-Match')
+    if client_etag:
+        current_etag = generate_etag(data)
+        if client_etag == current_etag:
+            return True, current_etag
+    return False, generate_etag(data)
+
+# ============================================
+# API ENDPOINTS
+# ============================================
+
 @app.route('/api/status', methods=['GET'])
 def status():
     """Check system status"""
     return jsonify({
         'status': 'ok',
         'ai_service': 'active',
-        'version': '2.0.0'
+        'version': '2.1.0',  # Updated version with caching
+        'cache_enabled': True,
+        'total_stations': len(station_service.get_all_stations())
     })
 
 # AI Analysis Endpoints
@@ -1145,6 +1186,185 @@ def get_map_data():
         print(f"❌ Error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/stations/nearby', methods=['GET', 'OPTIONS'])
+def get_nearby_stations():
+    """Get stations within a radius of user location (optimized for mobile/performance)"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        import math
+        
+        # Get user location and radius
+        user_lat = request.args.get('lat', type=float)
+        user_lon = request.args.get('lon', type=float)
+        radius_km = request.args.get('radius', 30, type=float)  # Default 30km
+        limit = request.args.get('limit', 200, type=int)  # Max stations to return
+        district = request.args.get('district', None, type=str)
+        station_type = request.args.get('type', None, type=str)
+        
+        if not user_lat or not user_lon:
+            return jsonify({'error': 'lat and lon parameters required'}), 400
+        
+        # Haversine formula to calculate distance
+        def calculate_distance(lat1, lon1, lat2, lon2):
+            R = 6371  # Earth's radius in km
+            dlat = math.radians(lat2 - lat1)
+            dlon = math.radians(lon2 - lon1)
+            a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
+            c = 2 * math.asin(math.sqrt(a))
+            return R * c
+        
+        all_stations = station_service.get_all_stations()
+        
+        # Apply filters
+        if district:
+            all_stations = [s for s in all_stations if s.get('district') == district]
+        if station_type:
+            all_stations = [s for s in all_stations if s.get('type') == station_type]
+        
+        # Calculate distances and filter by radius
+        nearby_stations = []
+        for station in all_stations:
+            distance = calculate_distance(
+                user_lat, user_lon,
+                station.get('latitude'), station.get('longitude')
+            )
+            if distance <= radius_km:
+                nearby_stations.append({
+                    'station': station,
+                    'distance': round(distance, 2)
+                })
+        
+        # Sort by distance (closest first)
+        nearby_stations.sort(key=lambda x: x['distance'])
+        
+        # Limit results
+        nearby_stations = nearby_stations[:limit]
+        
+        # Build response with station details
+        stations_data = []
+        for item in nearby_stations:
+            station = item['station']
+            station_details = station_service.get_station_by_id(
+                station.get('station_id') or station.get('id')
+            )
+            if station_details and station_details.get('currentReading'):
+                reading = station_details['currentReading']
+                stations_data.append({
+                    'id': station.get('station_id') or station.get('id'),
+                    'name': station.get('name'),
+                    'type': station.get('type'),
+                    'latitude': station.get('latitude'),
+                    'longitude': station.get('longitude'),
+                    'distance': item['distance'],
+                    'wqi': reading.get('wqi'),
+                    'status': reading.get('status'),
+                    'waterClass': reading.get('waterQualityClass'),
+                    'hasAlerts': len(reading.get('alerts', [])) > 0,
+                    'alertCount': len(reading.get('alerts', []))
+                })
+        
+        return jsonify({
+            'success': True,
+            'userLocation': {
+                'latitude': user_lat,
+                'longitude': user_lon
+            },
+            'radius': radius_km,
+            'totalFound': len(stations_data),
+            'stations': stations_data
+        })
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/stations/viewport', methods=['POST', 'OPTIONS'])
+def get_viewport_stations():
+    """Get stations within map viewport bounds (optimized for pan/zoom)"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        data = request.get_json()
+        
+        # Get viewport bounds
+        north = data.get('north')
+        south = data.get('south')
+        east = data.get('east')
+        west = data.get('west')
+        zoom_level = data.get('zoom', 10)
+        
+        if not all([north, south, east, west]):
+            return jsonify({'error': 'Viewport bounds required (north, south, east, west)'}), 400
+        
+        all_stations = station_service.get_all_stations()
+        
+        # Filter stations within viewport
+        viewport_stations = []
+        for station in all_stations:
+            lat = station.get('latitude')
+            lon = station.get('longitude')
+            
+            if south <= lat <= north and west <= lon <= east:
+                viewport_stations.append(station)
+        
+        # Adaptive loading based on zoom level
+        # High zoom (zoomed out) = show fewer stations, cluster the rest
+        # Low zoom (zoomed in) = show all stations in viewport
+        if zoom_level < 8:
+            # Zoomed out: sample stations (show ~100 max)
+            max_stations = 100
+            if len(viewport_stations) > max_stations:
+                # Sample evenly distributed stations
+                step = len(viewport_stations) // max_stations
+                viewport_stations = viewport_stations[::step][:max_stations]
+        elif zoom_level < 10:
+            # Medium zoom: show ~300 stations
+            max_stations = 300
+            if len(viewport_stations) > max_stations:
+                step = len(viewport_stations) // max_stations
+                viewport_stations = viewport_stations[::step][:max_stations]
+        # else: show all stations in viewport (zoomed in enough)
+        
+        # Build response
+        stations_data = []
+        for station in viewport_stations:
+            station_details = station_service.get_station_by_id(
+                station.get('station_id') or station.get('id')
+            )
+            if station_details and station_details.get('currentReading'):
+                reading = station_details['currentReading']
+                stations_data.append({
+                    'id': station.get('station_id') or station.get('id'),
+                    'name': station.get('name'),
+                    'type': station.get('type'),
+                    'latitude': station.get('latitude'),
+                    'longitude': station.get('longitude'),
+                    'wqi': reading.get('wqi'),
+                    'status': reading.get('status'),
+                    'waterClass': reading.get('waterQualityClass'),
+                    'hasAlerts': len(reading.get('alerts', [])) > 0,
+                    'alertCount': len(reading.get('alerts', []))
+                })
+        
+        return jsonify({
+            'success': True,
+            'viewport': {
+                'north': north,
+                'south': south,
+                'east': east,
+                'west': west,
+                'zoom': zoom_level
+            },
+            'totalInViewport': len(viewport_stations),
+            'returned': len(stations_data),
+            'stations': stations_data
+        })
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     print("\n" + "="*80)
     print("🚀 PureHealth Enhanced Water Quality Monitoring System")
@@ -1182,4 +1402,4 @@ if __name__ == '__main__':
     print("🔄 Initializing Maharashtra Water Quality Monitoring Network...")
     station_service.start_simulation(update_interval=900)
     
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host='0.0.0.0', port=8000, debug=False)

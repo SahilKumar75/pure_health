@@ -8,95 +8,11 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
-import 'package:pure_health/core/services/water_quality_api_service.dart';
-
-// Pulsing location dot widget
-class PulsingLocationDot extends StatefulWidget {
-  const PulsingLocationDot({super.key});
-
-  @override
-  State<PulsingLocationDot> createState() => _PulsingLocationDotState();
-}
-
-class _PulsingLocationDotState extends State<PulsingLocationDot> 
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    )..repeat(reverse: true);
-    
-    _animation = Tween<double>(begin: 0.8, end: 1.2).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            // Animated pulsing outer ring
-            Transform.scale(
-              scale: _animation.value,
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.primaryBlue.withOpacity(0.15),
-                ),
-              ),
-            ),
-            // Middle ring
-            Transform.scale(
-              scale: 0.7,
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.primaryBlue.withOpacity(0.25),
-                ),
-              ),
-            ),
-            // Inner dot with white border (fixed size)
-            Container(
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primaryBlue,
-                border: Border.all(color: AppColors.white, width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primaryBlue.withOpacity(0.6),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
+import 'package:pure_health/core/services/local_station_generator.dart';
+import 'package:pure_health/core/models/station_models.dart';
+import 'package:pure_health/features/home/presentation/widgets/pulsing_location_dot.dart';
+import 'package:pure_health/features/home/presentation/widgets/station_details_panel.dart';
+import 'package:pure_health/features/home/presentation/widgets/dashboard_panel.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -106,34 +22,101 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // UI State
   int _selectedIndex = 0;
   bool _isBottomBarExpanded = false;
-  bool _isSidebarExpanded = true; // Track sidebar expansion state (default expanded)
+  bool _isSidebarExpanded = true;
+  
+  // Map State
   late final MapController _mapController;
-  double _currentZoom = 7.0; // Lower zoom to show all of Maharashtra
+  double _currentZoom = 7.0;
   
-  // API Service
-  final WaterQualityApiService _apiService = WaterQualityApiService();
+  // Local Data Generator (no backend needed!)
+  final LocalStationGenerator _stationGenerator = LocalStationGenerator();
   
-  // Real-time data
-  List<WaterQualityStation> _stations = [];
-  Map<String, StationData> _stationData = {};
+  // Data State
+  List<WaterQualityStation> _allStations = []; // ALL 4495 stations
+  Map<String, StationData> _allStationData = {}; // Data for all stations
+  List<WaterQualityStation> _visibleStations = []; // Only stations in viewport
+  Map<String, StationData> _stationData = {}; // Data for visible stations
+  
+  // Loading State
+  bool _isLoading = false;  // START as false so first load can proceed
+  
+  // Timers
   Timer? _dataUpdateTimer;
+  Timer? _viewportLoadTimer;
+  
+  // Statistics
   int _totalStations = 0;
   int _activeAlerts = 0;
   int _safeCount = 0;
   int _warningCount = 0;
   int _criticalCount = 0;
-  DateTime _lastDataFetch = DateTime.now();
-  String? _selectedStationId;
-  LatLng? _userLocation; // User's current location
-  bool _isLoading = true;
-  String? _errorMessage;
   
-  // Filters
+  // Selection & Filters
+  String? _selectedStationId;
   String? _selectedDistrict;
   String? _selectedType;
   List<String> _availableDistricts = [];
+  
+  // Location
+  LatLng? _userLocation;
+
+  @override
+  void initState() {
+    super.initState();
+    _mapController = MapController();
+    
+    print('[INIT] App initialized - initializing local data generator');
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted) {
+        // Step 1: Initialize local station generator
+        print('[GENERATOR] Generating all 4495 stations locally...');
+        await _stationGenerator.initialize(totalStations: 4495);
+        final totalGenerated = _stationGenerator.getTotalStationCount();
+        print('[GENERATOR] ✓ All $totalGenerated stations generated locally - NO BACKEND NEEDED!');
+        print('[GENERATOR] Ready to use!');
+        
+        // Step 2: Get user location
+        await _getUserLocation();
+        
+        if (mounted && _userLocation != null) {
+          print('[SUCCESS] Location acquired: ${_userLocation!.latitude}, ${_userLocation!.longitude}');
+          print('[LOCATION] Moving map to user location');
+          
+          // Move map to user location
+          _mapController.move(_userLocation!, 12.0); // Start at zoom 12
+          _currentZoom = 12.0;
+          
+          // Step 3: Load nearby stations (30km radius)
+          print('[LOAD] Loading stations within 30km radius');
+          _loadMaharashtraData();
+          
+          // Step 4: Start periodic updates
+          _startDataUpdates();
+        } else {
+          print('[WARNING] Location not available, using default center');
+          // Fallback: load initial data at default location
+          _loadMaharashtraData();
+          _startDataUpdates();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    // Cancel timers first
+    _dataUpdateTimer?.cancel();
+    _viewportLoadTimer?.cancel();
+    
+    // Then dispose resources
+    _mapController.dispose();
+    
+    super.dispose();
+  }
 
   // Safe setState wrapper
   void _safeSetState(VoidCallback fn) {
@@ -142,164 +125,141 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _mapController = MapController();
-    
-    // Delay initial data load to ensure widget tree is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _loadMaharashtraData();
-        _startDataUpdates();
-        _getUserLocation();
-      }
-    });
-  }
-
-  /// Get user's current location
+  /// Get user's current location with timeout
   Future<void> _getUserLocation() async {
     if (!mounted) return;
     
     try {
-      // Check if location services are enabled
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      print('[DEVICE] Checking location services...');
+      
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled()
+        .timeout(const Duration(seconds: 3), onTimeout: () => false);
+      
       if (!serviceEnabled) {
-        if (!mounted) return;
-        // Location services are not enabled, use fallback
-        const fallbackLoc = LatLng(18.5204, 73.8567); // Pune, Maharashtra
-        setState(() {
-          _userLocation = fallbackLoc;
-        });
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            _mapController.move(fallbackLoc, 10.0);
-          }
-        });
+        print('[WARNING] Location services disabled, using fallback');
+        _setFallbackLocation();
         return;
       }
 
-      // Check location permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
+        print('[PERMISSION] Requesting location permission...');
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          // Permission denied, use fallback
-          const fallbackLoc = LatLng(18.5204, 73.8567); // Pune, Maharashtra
-          setState(() {
-            _userLocation = fallbackLoc;
-          });
-          Future.delayed(const Duration(milliseconds: 500), () {
-            _mapController.move(fallbackLoc, 10.0);
-          });
+          print('[ERROR] Permission denied, using fallback');
+          _setFallbackLocation();
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        // Permissions are permanently denied, use fallback
-        const fallbackLoc = LatLng(18.5204, 73.8567); // Pune, Maharashtra
-        setState(() {
-          _userLocation = fallbackLoc;
-        });
-        Future.delayed(const Duration(milliseconds: 500), () {
-          _mapController.move(fallbackLoc, 10.0);
-        });
+        print('[ERROR] Permission permanently denied, using fallback');
+        _setFallbackLocation();
         return;
       }
 
-      // Get actual current position
+      print('[LOCATION] Getting current position...');
       Position position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
           distanceFilter: 100,
         ),
-      );
+      ).timeout(const Duration(seconds: 5), onTimeout: () {
+        throw TimeoutException('Location timeout');
+      });
       
       if (!mounted) return;
       
       final userLoc = LatLng(position.latitude, position.longitude);
+      print('[SUCCESS] Location acquired: ${position.latitude}, ${position.longitude}');
       
       _safeSetState(() {
         _userLocation = userLoc;
       });
       
-      // Center map on user's actual location
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          _mapController.move(userLoc, 12.0); // Zoom level 12 for closer view
+          _mapController.move(userLoc, 12.0);
         }
       });
     } catch (e) {
-      if (!mounted) return;
-      
-      // Error getting location, use fallback
-      const fallbackLoc = LatLng(18.5204, 73.8567); // Pune, Maharashtra
-      _safeSetState(() {
-        _userLocation = fallbackLoc;
-      });
-      
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          _mapController.move(fallbackLoc, 10.0);
-        }
-      });
+      print('[WARNING] Location error: $e, using fallback');
+      _setFallbackLocation();
     }
   }
 
-  @override
-  void dispose() {
-    _mapController.dispose();
-    _dataUpdateTimer?.cancel();
-    super.dispose();
+  void _setFallbackLocation() {
+    if (!mounted) return;
+    const fallbackLoc = LatLng(18.5204, 73.8567); // Pune, Maharashtra
+    _safeSetState(() {
+      _userLocation = fallbackLoc;
+    });
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _mapController.move(fallbackLoc, 10.0);
+      }
+    });
   }
 
   Future<void> _loadMaharashtraData() async {
     if (!mounted) return;
     
+    if (_isLoading) {
+      print('[SKIP] Already loading, skipping duplicate request');
+      return;
+    }
+    
+    print('[LOAD] Starting data load from LOCAL GENERATOR... (location: ${_userLocation != null ? "available" : "pending"})');
+    print('[TIME] Current time: ${DateTime.now()}');
+    
     _safeSetState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
+    print('[SUCCESS] _isLoading set to true');
 
     try {
-      // Fetch stations with map data (includes GPS and basic info)
-      final mapResponse = await _apiService.getMapData(
-        perPage: 5000, // Get all stations in one call
-        district: _selectedDistrict,
-        type: _selectedType,
-        minimal: false, // Get full data including current readings
+      // Load ALL stations at once (no filtering)
+      print('[LOAD] Loading ALL 4495 stations from embedded data...');
+      
+      final mapResponse = _stationGenerator.getMapData(
+        perPage: 10000, // Request all stations
+        district: null,
+        type: null,
+        minimal: false,
       );
+      
+      if (!mounted) {
+        print('[WARNING] Widget unmounted, aborting data processing');
+        return;
+      }
 
-      if (!mounted) return;
+      print('[DATA] Processing ${(mapResponse['stations'] as List).length} stations...');
 
-      // Parse stations from response
       final stationsJson = mapResponse['stations'] as List;
       
-      // For now, create mock StationData since API doesn't return full current_data
-      // TODO: Update when backend API includes full parameter data
-      _stations = [];
-      _stationData.clear();
+      _allStations = [];
+      _allStationData.clear();
       
+      // Store ALL stations in memory
       for (final stationJson in stationsJson) {
-        // Parse station
+        final stationId = stationJson['id'] as String;
+        
         final station = WaterQualityStation.fromJson({
-          'id': stationJson['id'],
+          'id': stationId,
           'name': stationJson['name'],
           'type': stationJson['type'],
           'monitoringType': 'baseline',
-          'district': 'Maharashtra', // Default since not in minimal response
+          'district': stationJson['district'],
           'region': 'Western',
           'latitude': stationJson['latitude'],
           'longitude': stationJson['longitude'],
           'laboratory': 'MPCB',
           'samplingFrequency': 'Monthly',
         });
-        _stations.add(station);
+        _allStations.add(station);
         
-        // Create basic StationData from the minimal response
-        _stationData[station.id] = StationData(
-          stationId: station.id,
+        _allStationData[stationId] = StationData(
+          stationId: stationId,
           timestamp: DateTime.now().toIso8601String(),
           wqi: (stationJson['wqi'] ?? 50.0).toDouble(),
           status: stationJson['status'] ?? 'Unknown',
@@ -317,28 +277,29 @@ class _HomePageState extends State<HomePage> {
       }
       
       _safeSetState(() {
-        _totalStations = _stations.length;
-        _lastDataFetch = DateTime.now();
-
-        // Get unique districts for filter
-        _availableDistricts = _stations
-            .map((s) => s.district)
-            .toSet()
-            .toList()
-          ..sort();
-        
-        _updateStats();
+        _availableDistricts = _allStations.map((s) => s.district).toSet().toList()..sort();
         _isLoading = false;
       });
+      print('[SUCCESS] Loaded ALL ${_allStations.length} stations into memory!');
+      print('[DONE] Now filtering by viewport...');
+      
+      // Filter by current viewport
+      _updateVisibleStations();
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        print('[WARNING] Widget unmounted during error handling');
+        return;
+      }
+      
+      print('[ERROR] Error loading stations: $e');
+      print('[ERROR] Error type: ${e.runtimeType}');
+      print('[ERROR] Stack trace: ${StackTrace.current}');
       
       _safeSetState(() {
         _isLoading = false;
-        _errorMessage = 'Failed to load stations: ${e.toString()}';
       });
+      print('[DONE] _isLoading set to false after error');
       
-      // Show error snackbar
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -356,23 +317,68 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  String _getTimeAgo(DateTime timestamp) {
-    final difference = DateTime.now().difference(timestamp);
-    if (difference.inSeconds < 60) {
-      return '${difference.inSeconds}s ago';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else {
-      return '${difference.inDays}d ago';
+  // Filter stations based on current viewport
+  void _updateVisibleStations() {
+    if (!mounted || _allStations.isEmpty) return;
+    
+    final bounds = _mapController.camera.visibleBounds;
+    final zoom = _mapController.camera.zoom;
+    
+    print('[VIEWPORT] Filtering ${_allStations.length} stations for viewport');
+    print('[VIEWPORT] Bounds: N=${bounds.north.toStringAsFixed(2)}, S=${bounds.south.toStringAsFixed(2)}, E=${bounds.east.toStringAsFixed(2)}, W=${bounds.west.toStringAsFixed(2)}');
+    print('[VIEWPORT] Zoom: ${zoom.toStringAsFixed(1)}');
+    
+    final visibleStations = <WaterQualityStation>[];
+    final visibleData = <String, StationData>{};
+    
+    for (final station in _allStations) {
+      // Apply district filter if selected
+      if (_selectedDistrict != null && station.district != _selectedDistrict) continue;
+      
+      // Apply type filter if selected
+      if (_selectedType != null && station.type != _selectedType) continue;
+      
+      // Check if station is within viewport bounds
+      if (station.latitude >= bounds.south &&
+          station.latitude <= bounds.north &&
+          station.longitude >= bounds.west &&
+          station.longitude <= bounds.east) {
+        visibleStations.add(station);
+        if (_allStationData.containsKey(station.id)) {
+          visibleData[station.id] = _allStationData[station.id]!;
+        }
+      }
     }
+    
+    _safeSetState(() {
+      _visibleStations = visibleStations;
+      _stationData = visibleData;
+      _totalStations = visibleStations.length;
+      _updateStats();
+    });
+    
+    print('[VIEWPORT] Showing ${visibleStations.length} stations in current view');
+  }
+
+  void _onMapMove() {
+    final currentZoom = _mapController.camera.zoom;
+    
+    // Update current zoom
+    _currentZoom = currentZoom;
+    
+    // Debounce: Only update after map stops moving for 300ms
+    _viewportLoadTimer?.cancel();
+    _viewportLoadTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted && _allStations.isNotEmpty) {
+        _updateVisibleStations();
+      }
+    });
   }
 
   void _updateStats() {
     int safe = 0, warning = 0, critical = 0;
     
-    _stationData.forEach((key, data) {
+    for (var data in _stationData.values) {
       switch (data.status.toLowerCase()) {
         case 'safe':
         case 'good':
@@ -387,7 +393,7 @@ class _HomePageState extends State<HomePage> {
           critical++;
           break;
       }
-    });
+    }
     
     _safeSetState(() {
       _safeCount = safe;
@@ -398,20 +404,37 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _startDataUpdates() {
-    _dataUpdateTimer?.cancel(); // Cancel any existing timer
-    _dataUpdateTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      if (mounted) {
-        _loadMaharashtraData();
-      } else {
-        timer.cancel(); // Cancel if widget is disposed
-      }
-    });
+    // DISABLED: No need for periodic updates since all data is local
+    // Data doesn't change, it's all embedded in the frontend
+    print('[INFO] Periodic updates disabled - all data is static and local');
+    _dataUpdateTimer?.cancel();
+    
+    // Original code kept for reference but commented out:
+    // _dataUpdateTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    //   if (mounted) {
+    //     _loadMaharashtraData();
+    //   } else {
+    //     timer.cancel();
+    //   }
+    // });
+  }
+
+  String _getTimeAgo(DateTime timestamp) {
+    final difference = DateTime.now().difference(timestamp);
+    if (difference.inSeconds < 60) {
+      return '${difference.inSeconds}s ago';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
   }
 
   List<Marker> _buildStationMarkers() {
     final markers = <Marker>[];
     
-    // Add user's current location marker (pulsing blue dot - Google Maps style)
     if (_userLocation != null) {
       markers.add(
         Marker(
@@ -423,39 +446,31 @@ class _HomePageState extends State<HomePage> {
       );
     }
     
-    // Add MPCB monitoring station markers
-    for (final station in _stations) {
+    for (final station in _visibleStations) {
       final data = _stationData[station.id];
-      if (data == null) continue; // Skip if no data available
+      if (data == null) continue;
       
-      final lat = station.latitude;
-      final lon = station.longitude;
-      final status = data.status;
-      final timestamp = DateTime.parse(data.timestamp);
-      final name = station.name;
-      final stationType = station.type;
-      
-      // Status colors following MPCB standards
       Color markerColor;
-      
-      final statusLower = status.toLowerCase();
+      final statusLower = data.status.toLowerCase();
       if (statusLower == 'safe' || statusLower == 'good' || statusLower == 'excellent') {
-        markerColor = const Color(0xFF10B981); // Green - Safe
+        markerColor = const Color(0xFF10B981);
       } else if (statusLower == 'warning' || statusLower == 'moderate') {
-        markerColor = const Color(0xFFF59E0B); // Amber - Caution
+        markerColor = const Color(0xFFF59E0B);
       } else {
-        markerColor = const Color(0xFFEF4444); // Red - Alert
+        markerColor = const Color(0xFFEF4444);
       }
+      
+      final timestamp = DateTime.parse(data.timestamp);
       
       markers.add(
         Marker(
-          point: LatLng(lat, lon),
-          width: 20,  // Much smaller - was 56
-          height: 20, // Much smaller - was 56
+          point: LatLng(station.latitude, station.longitude),
+          width: 20,
+          height: 20,
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             child: Tooltip(
-              message: '$name\n$stationType\nStatus: $status\nUpdated: ${_getTimeAgo(timestamp)}',
+              message: '${station.name}\n${station.type}\nStatus: ${data.status}\nUpdated: ${_getTimeAgo(timestamp)}',
               preferBelow: false,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -473,27 +488,21 @@ class _HomePageState extends State<HomePage> {
                     _selectedStationId = station.id;
                   });
                 },
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Main station marker - simple dot
-                    Container(
-                      width: 12,  // Smaller marker
-                      height: 12,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: markerColor,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: markerColor.withOpacity(0.4),
-                            blurRadius: 4,
-                            spreadRadius: 1,
-                          ),
-                        ],
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: markerColor,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: markerColor.withOpacity(0.4),
+                        blurRadius: 4,
+                        spreadRadius: 1,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -505,427 +514,30 @@ class _HomePageState extends State<HomePage> {
     return markers;
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Safe':
-        return AppColors.success;
-      case 'Warning':
-        return AppColors.warning;
-      case 'Critical':
-        return AppColors.error;
-      default:
-        return AppColors.charcoal;
-    }
-  }
-
-  void _zoomIn() {
-    setState(() {
-      _currentZoom = (_currentZoom + 1).clamp(1.0, 18.0);
-      _mapController.move(_mapController.camera.center, _currentZoom);
-    });
-  }
-
-  void _zoomOut() {
-    setState(() {
-      _currentZoom = (_currentZoom - 1).clamp(1.0, 18.0);
-      _mapController.move(_mapController.camera.center, _currentZoom);
-    });
-  }
-
-  Widget _buildStatRow(String label, String value, IconData icon, Color color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 18, color: color),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: AppTextStyles.body.copyWith(
-                color: AppColors.charcoal.withOpacity(0.7),
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-        Text(
-          value,
-          style: AppTextStyles.heading4.copyWith(
-            color: color,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatusBadge(String label, int count, Color color) {
-    return Column(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: color.withOpacity(0.3),
-              width: 1.5,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              count.toString(),
-              style: AppTextStyles.heading3.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: AppTextStyles.caption.copyWith(
-            color: AppColors.charcoal.withOpacity(0.7),
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLegendItem(String label, String description, Color color, IconData icon) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: AppColors.white, size: 14),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: AppTextStyles.body.copyWith(
-                  color: AppColors.charcoal,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-              Text(
-                description,
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.charcoal.withOpacity(0.6),
-                  fontSize: 10,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionHeader(String title, IconData icon) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          color: AppColors.primaryBlue,
-          size: 20,
-        ),
-        const SizedBox(width: 10),
-        Text(
-          title,
-          style: AppTextStyles.heading4.copyWith(
-            color: AppColors.primaryBlue,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStationDetailsPanel() {
-    if (_selectedStationId == null) return const SizedBox.shrink();
-    
-    final stationData = _stationData[_selectedStationId];
-    if (stationData == null) return const SizedBox.shrink();
-    
-    final status = stationData.status;
-    // Get parameters from the data
-    final pH = stationData.parameters['pH'] as double?;
-    final turbidity = stationData.parameters['turbidity'] as double?;
-    final dissolvedOxygen = stationData.parameters['dissolvedOxygen'] as double?;
-    final temperature = stationData.parameters['temperature'] as double?;
-    final timestamp = DateTime.parse(stationData.timestamp);
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Status Badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: _getStatusColor(status).withOpacity(0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: _getStatusColor(status),
-              width: 1.5,
-            ),
-          ),
-          child: Text(
-            status,
-            style: AppTextStyles.caption.copyWith(
-              color: _getStatusColor(status),
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Updated ${_getTimeAgo(timestamp)}',
-          style: AppTextStyles.caption.copyWith(
-            color: AppColors.mediumGray,
-            fontSize: 12,
-          ),
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Current Readings
-        _buildSectionHeader('Current Readings', Icons.analytics),
-        const SizedBox(height: 16),
-                _buildReadingCard('pH Level', pH?.toStringAsFixed(2) ?? 'N/A', 'Neutral: 6.5-8.5', Icons.water_drop),
-                const SizedBox(height: 12),
-                _buildReadingCard('Turbidity', turbidity != null ? '${turbidity.toStringAsFixed(2)} NTU' : 'N/A', 'Max: 5 NTU', Icons.blur_on),
-                const SizedBox(height: 12),
-                _buildReadingCard('Dissolved Oxygen', dissolvedOxygen != null ? '${dissolvedOxygen.toStringAsFixed(2)} mg/L' : 'N/A', 'Min: 4 mg/L', Icons.air),
-                const SizedBox(height: 12),
-                _buildReadingCard('Temperature', temperature != null ? '${temperature.toStringAsFixed(1)}°C' : 'N/A', 'Normal: 20-30°C', Icons.thermostat),
-                
-                const SizedBox(height: 24),
-                
-                // AI Predictions
-                _buildSectionHeader('AI Predictions', Icons.trending_up),
-                const SizedBox(height: 16),
-                _buildPredictionCard('Next 7 Days', 'Quality expected to remain ${status.toLowerCase()}', Icons.calendar_today),
-                const SizedBox(height: 12),
-                _buildPredictionCard('Risk Level', 'Low contamination risk', Icons.shield),
-                
-                const SizedBox(height: 24),
-                
-                // Quick Insights
-                _buildSectionHeader('Key Insights', Icons.lightbulb_outline),
-                const SizedBox(height: 16),
-                _buildInsightItem('✓ All parameters within safe limits', AppColors.success),
-                const SizedBox(height: 8),
-                _buildInsightItem('↗ Slight pH increase trend observed', AppColors.warning),
-                const SizedBox(height: 8),
-                _buildInsightItem('→ Regular monitoring recommended', AppColors.primaryBlue),
-                
-                const SizedBox(height: 24),
-                
-                // Actions
-                _buildSectionHeader('Available Actions', Icons.touch_app),
-                const SizedBox(height: 16),
-        _buildActionButton2('View Full Report', Icons.description, () {}),
-        const SizedBox(height: 10),
-        _buildActionButton2('Export Data', Icons.download, () {}),
-        const SizedBox(height: 10),
-        _buildActionButton2('Set Alert', Icons.notifications, () {}),
-      ],
-    );
-  }
-
-  Widget _buildReadingCard(String label, String value, String range, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.lightCream,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.darkCream.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.primaryBlue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: AppColors.primaryBlue, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.mediumGray,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: AppTextStyles.heading4.copyWith(
-                    color: AppColors.charcoal,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  range,
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.mediumGray,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPredictionCard(String title, String description, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.success.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.success.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.success, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.charcoal,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  description,
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.mediumGray,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInsightItem(String text, Color color) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          margin: const EdgeInsets.only(top: 2),
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
-            style: AppTextStyles.body.copyWith(
-              color: AppColors.charcoal,
-              fontSize: 13,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton2(String label, IconData icon, VoidCallback onPressed) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.primaryBlue.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: AppColors.primaryBlue.withOpacity(0.2),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: AppColors.primaryBlue, size: 18),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: AppTextStyles.body.copyWith(
-                color: AppColors.primaryBlue,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.lightCream,
-      body: Stack(
-        children: [
-          // Map widget as the base layer with monitoring station markers
-          CustomMapWidget(
+    // Guard against building after disposal
+    if (!mounted) {
+      return const SizedBox.shrink();
+    }
+    
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: Scaffold(
+        backgroundColor: AppColors.lightCream,
+        body: Stack(
+          children: [
+            // Map
+            CustomMapWidget(
             zoom: _currentZoom,
             sidebarWidth: 72.0,
             mapController: _mapController,
             markers: _buildStationMarkers(),
-            initialCenter: const LatLng(19.7515, 75.7139), // Center of Maharashtra
+            initialCenter: const LatLng(19.7515, 75.7139),
+            onMapMove: _onMapMove,
           ),
 
-          // Sidebar positioned on the left
+          // Sidebar
           Positioned(
             left: 0,
             top: 0,
@@ -933,23 +545,27 @@ class _HomePageState extends State<HomePage> {
             child: CustomSidebar(
               selectedIndex: _selectedIndex,
               onItemSelected: (int index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
+                if (mounted) {
+                  setState(() {
+                    _selectedIndex = index;
+                  });
+                }
               },
               onExpansionChanged: (bool isExpanded) {
-                setState(() {
-                  _isSidebarExpanded = isExpanded;
-                });
+                if (mounted) {
+                  setState(() {
+                    _isSidebarExpanded = isExpanded;
+                  });
+                }
               },
             ),
           ),
 
-          // Compact Logo positioned beside sidebar at top left
+          // Logo
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            left: _isSidebarExpanded ? 224 : 96, // 200px (expanded) or 72px (collapsed) + 24px margin
+            left: _isSidebarExpanded ? 224 : 96,
             top: 24,
             child: Container(
               padding: const EdgeInsets.all(12),
@@ -980,7 +596,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // Right Side Panel - Comprehensive Info Card
+          // Right Side Panel
           Positioned(
             right: 24,
             top: 24,
@@ -1007,13 +623,17 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header with back button if station selected
+                    // Header
                     Row(
                       children: [
                         if (_selectedStationId != null) 
                           IconButton(
                             icon: Icon(Icons.arrow_back, color: AppColors.primaryBlue),
-                            onPressed: () => setState(() => _selectedStationId = null),
+                            onPressed: () {
+                              if (mounted) {
+                                setState(() => _selectedStationId = null);
+                              }
+                            },
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
@@ -1037,7 +657,7 @@ class _HomePageState extends State<HomePage> {
                             children: [
                               Text(
                                 _selectedStationId != null 
-                                    ? (_stations.firstWhere((s) => s.id == _selectedStationId, orElse: () => _stations.first).name)
+                                    ? (_allStations.firstWhere((s) => s.id == _selectedStationId, orElse: () => _allStations.first).name)
                                     : 'PureHealth',
                                 style: AppTextStyles.heading3.copyWith(
                                   color: AppColors.charcoal,
@@ -1065,221 +685,66 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 28),
                     
                     // Show station details OR dashboard
-                    if (_selectedStationId != null) 
-                      _buildStationDetailsPanel()
-                    else ...[
-                      // Filters Section
-                      _buildSectionHeader('Filters', Icons.filter_list),
-                      const SizedBox(height: 16),
-                      
-                      // District filter
-                      Focus(
-                        skipTraversal: true,
-                        canRequestFocus: false,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.lightCream,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppColors.darkCream.withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String?>(
-                              isExpanded: true,
-                              value: _selectedDistrict,
-                              hint: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text(
-                                  'All Districts',
-                                  style: AppTextStyles.body.copyWith(
-                                    color: AppColors.mediumGray,
-                                  ),
-                                ),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              borderRadius: BorderRadius.circular(12),
-                              items: [
-                                DropdownMenuItem<String?>(
-                                  value: null,
-                                  child: Text('All Districts', style: AppTextStyles.body),
-                                ),
-                                ..._availableDistricts.map((district) => DropdownMenuItem<String?>(
-                                  value: district,
-                                  child: Text(district, style: AppTextStyles.body),
-                                )),
-                              ],
-                              onChanged: (value) {
-                                _safeSetState(() {
-                                  _selectedDistrict = value;
-                                });
-                                _loadMaharashtraData();
-                              },
-                            ),
-                          ),
-                        ),
+                    if (_selectedStationId != null && _stationData[_selectedStationId] != null) 
+                      StationDetailsPanel(
+                        stationId: _selectedStationId!,
+                        station: _allStations.firstWhere((s) => s.id == _selectedStationId),
+                        stationData: _stationData[_selectedStationId]!,
+                        getTimeAgo: _getTimeAgo,
+                      )
+                    else
+                      DashboardPanel(
+                        totalStations: _totalStations,
+                        activeAlerts: _activeAlerts,
+                        safeCount: _safeCount,
+                        warningCount: _warningCount,
+                        criticalCount: _criticalCount,
+                        selectedDistrict: _selectedDistrict,
+                        selectedType: _selectedType,
+                        availableDistricts: _availableDistricts,
+                        onDistrictChanged: (value) {
+                          _safeSetState(() {
+                            _selectedDistrict = value;
+                          });
+                          _loadMaharashtraData();
+                        },
+                        onTypeChanged: (value) {
+                          _safeSetState(() {
+                            _selectedType = value;
+                          });
+                          _loadMaharashtraData();
+                        },
+                        onClearFilters: () {
+                          _safeSetState(() {
+                            _selectedDistrict = null;
+                            _selectedType = null;
+                          });
+                          _loadMaharashtraData();
+                        },
                       ),
-                      
-                      const SizedBox(height: 12),
-                      
-                      // Type filter
-                      Focus(
-                        skipTraversal: true,
-                        canRequestFocus: false,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.lightCream,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppColors.darkCream.withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String?>(
-                              isExpanded: true,
-                              value: _selectedType,
-                              hint: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text(
-                                  'All Types',
-                                  style: AppTextStyles.body.copyWith(
-                                    color: AppColors.mediumGray,
-                                  ),
-                                ),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              borderRadius: BorderRadius.circular(12),
-                              items: [
-                                DropdownMenuItem<String?>(
-                                  value: null,
-                                  child: Text('All Types', style: AppTextStyles.body),
-                                ),
-                                DropdownMenuItem<String?>(
-                                  value: 'Surface Water',
-                                  child: Text('Surface Water', style: AppTextStyles.body),
-                                ),
-                                DropdownMenuItem<String?>(
-                                  value: 'Groundwater',
-                                  child: Text('Groundwater', style: AppTextStyles.body),
-                                ),
-                              ],
-                              onChanged: (value) {
-                                _safeSetState(() {
-                                  _selectedType = value;
-                                });
-                                _loadMaharashtraData();
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                      
-                      // Clear filters button
-                      if (_selectedDistrict != null || _selectedType != null) ...[
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              _safeSetState(() {
-                                _selectedDistrict = null;
-                                _selectedType = null;
-                              });
-                              _loadMaharashtraData();
-                            },
-                            icon: const Icon(Icons.clear, size: 18),
-                            label: const Text('Clear Filters'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.lightCream,
-                              foregroundColor: AppColors.primaryBlue,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                  color: AppColors.primaryBlue.withOpacity(0.3),
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                      
-                      const SizedBox(height: 20),
-                      Divider(height: 1, color: AppColors.darkCream.withOpacity(0.4)),
-                      const SizedBox(height: 20),
-                      
-                      // System Status Section
-                      _buildSectionHeader('System Status', Icons.analytics_outlined),
-                    const SizedBox(height: 16),
-                    _buildStatRow(
-                      'Total Stations',
-                      _totalStations.toString(),
-                      Icons.location_on,
-                      AppColors.primaryBlue,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildStatRow(
-                      'Active Alerts',
-                      _activeAlerts.toString(),
-                      Icons.notifications_active,
-                      _activeAlerts > 0 ? AppColors.warning : AppColors.success,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildStatRow(
-                      'Last Updated',
-                      'Just now',
-                      Icons.access_time,
-                      AppColors.mediumGray,
-                    ),
-                    
-                    const SizedBox(height: 20),
-                    Divider(height: 1, color: AppColors.darkCream.withOpacity(0.4)),
-                    const SizedBox(height: 20),
-                    
-                    // Status Distribution
-                    _buildSectionHeader('Status Distribution', Icons.pie_chart_outline),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildStatusBadge('Safe', _safeCount, AppColors.success),
-                        _buildStatusBadge('Warning', _warningCount, AppColors.warning),
-                        _buildStatusBadge('Critical', _criticalCount, AppColors.error),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    Divider(height: 1, color: AppColors.darkCream.withOpacity(0.4)),
-                    const SizedBox(height: 20),
-                    
-                    // Map Legend
-                    _buildSectionHeader('Map Legend', Icons.map_outlined),
-                    const SizedBox(height: 16),
-                    _buildLegendItem('Safe', 'Within limits', AppColors.success, Icons.check_circle),
-                    const SizedBox(height: 12),
-                    _buildLegendItem('Warning', 'Approaching limits', AppColors.warning, Icons.warning),
-                    const SizedBox(height: 12),
-                    _buildLegendItem('Critical', 'Exceeds limits', AppColors.error, Icons.error),
-                    ],
                   ],
                 ),
               ),
             ),
           ),
 
-          // Bottom center expandable control bar with more options
+          // Bottom control bar
           Positioned(
             left: 0,
             right: 0,
             bottom: 24,
             child: Center(
               child: MouseRegion(
-                onEnter: (_) => setState(() => _isBottomBarExpanded = true),
-                onExit: (_) => setState(() => _isBottomBarExpanded = false),
+                onEnter: (_) {
+                  if (mounted) {
+                    setState(() => _isBottomBarExpanded = true);
+                  }
+                },
+                onExit: (_) {
+                  if (mounted) {
+                    setState(() => _isBottomBarExpanded = false);
+                  }
+                },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
@@ -1305,100 +770,90 @@ class _HomePageState extends State<HomePage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Expanded options
                         if (_isBottomBarExpanded) ...[
-                          // Zoom Out
-                          AnimatedOpacity(
-                            opacity: 1.0,
-                            duration: const Duration(milliseconds: 200),
-                            child: _buildControlButton(
-                              icon: CupertinoIcons.minus_circle_fill,
-                              tooltip: 'Zoom Out',
-                              onPressed: _zoomOut,
-                            ),
-                          ),
-                          // Zoom In
-                          AnimatedOpacity(
-                            opacity: 1.0,
-                            duration: const Duration(milliseconds: 200),
-                            child: _buildControlButton(
-                              icon: CupertinoIcons.plus_circle_fill,
-                              tooltip: 'Zoom In',
-                              onPressed: _zoomIn,
-                            ),
-                          ),
-                          // Vertical divider
-                          Container(
-                            height: 32,
-                            width: 1,
-                            color: AppColors.darkCream.withOpacity(0.3),
-                          ),
-                          // Reset View
-                          AnimatedOpacity(
-                            opacity: 1.0,
-                            duration: const Duration(milliseconds: 200),
-                            child: _buildControlButton(
-                              icon: CupertinoIcons.location_fill,
-                              tooltip: 'Reset View',
-                              onPressed: () {
+                          _buildControlButton(
+                            icon: CupertinoIcons.minus_circle_fill,
+                            tooltip: 'Zoom Out',
+                            onPressed: () {
+                              if (mounted) {
                                 setState(() {
-                                  _currentZoom = 7.0;
-                                  _mapController.move(
-                                    const LatLng(19.7515, 75.7139),
-                                    _currentZoom,
-                                  );
+                                  _currentZoom = (_currentZoom - 1).clamp(1.0, 18.0);
+                                  _mapController.move(_mapController.camera.center, _currentZoom);
                                 });
-                              },
-                            ),
+                              }
+                            },
                           ),
-                          // Refresh Data
-                          AnimatedOpacity(
-                            opacity: 1.0,
-                            duration: const Duration(milliseconds: 200),
-                            child: _buildControlButton(
-                              icon: CupertinoIcons.refresh_circled_solid,
-                              tooltip: 'Refresh Data',
-                              onPressed: () {
-                                _loadMaharashtraData();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text('Data refreshed'),
-                                    duration: const Duration(seconds: 2),
-                                    behavior: SnackBarBehavior.floating,
-                                    backgroundColor: AppColors.success,
-                                  ),
-                                );
-                              },
-                            ),
+                          _buildControlButton(
+                            icon: CupertinoIcons.plus_circle_fill,
+                            tooltip: 'Zoom In',
+                            onPressed: () {
+                              if (mounted) {
+                                setState(() {
+                                  _currentZoom = (_currentZoom + 1).clamp(1.0, 18.0);
+                                  _mapController.move(_mapController.camera.center, _currentZoom);
+                                });
+                              }
+                            },
                           ),
-                          // Vertical divider
                           Container(
                             height: 32,
                             width: 1,
                             color: AppColors.darkCream.withOpacity(0.3),
                           ),
-                          // Fullscreen
-                          AnimatedOpacity(
-                            opacity: 1.0,
-                            duration: const Duration(milliseconds: 200),
-                            child: _buildControlButton(
-                              icon: CupertinoIcons.fullscreen,
-                              tooltip: 'Toggle Fullscreen',
-                              onPressed: () {},
-                            ),
+                          _buildControlButton(
+                            icon: CupertinoIcons.location_fill,
+                            tooltip: 'My Location',
+                            onPressed: () {
+                              if (mounted) {
+                                if (_userLocation != null) {
+                                  print('[LOCATION] Centering map on user location');
+                                  setState(() {
+                                    _currentZoom = 12.0;
+                                    _mapController.move(_userLocation!, _currentZoom);
+                                  });
+                                } else {
+                                  print('[WARNING] User location not available');
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Location not available'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
                           ),
-                          // Settings
-                          AnimatedOpacity(
-                            opacity: 1.0,
-                            duration: const Duration(milliseconds: 200),
-                            child: _buildControlButton(
-                              icon: CupertinoIcons.settings_solid,
-                              tooltip: 'Map Settings',
-                              onPressed: () {},
-                            ),
+                          _buildControlButton(
+                            icon: CupertinoIcons.refresh_circled_solid,
+                            tooltip: 'Refresh Data',
+                            onPressed: () {
+                              _loadMaharashtraData();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Data refreshed'),
+                                  duration: const Duration(seconds: 2),
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                            },
+                          ),
+                          Container(
+                            height: 32,
+                            width: 1,
+                            color: AppColors.darkCream.withOpacity(0.3),
+                          ),
+                          _buildControlButton(
+                            icon: CupertinoIcons.fullscreen,
+                            tooltip: 'Toggle Fullscreen',
+                            onPressed: () {},
+                          ),
+                          _buildControlButton(
+                            icon: CupertinoIcons.settings_solid,
+                            tooltip: 'Map Settings',
+                            onPressed: () {},
                           ),
                         ],
-                        // Collapsed state - Menu icon
                         if (!_isBottomBarExpanded)
                           CupertinoButton(
                             padding: const EdgeInsets.symmetric(
@@ -1452,6 +907,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
         ],
+      ),
       ),
     );
   }

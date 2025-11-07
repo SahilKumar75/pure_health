@@ -11,6 +11,7 @@ class CustomMapWidget extends StatefulWidget {
   final double sidebarWidth;
   final MapController? mapController;
   final LatLng? initialCenter;
+  final VoidCallback? onMapMove; // Callback for when map is moved/zoomed
 
   const CustomMapWidget({
     Key? key,
@@ -19,6 +20,7 @@ class CustomMapWidget extends StatefulWidget {
     this.sidebarWidth = 72.0,
     this.mapController,
     this.initialCenter,
+    this.onMapMove,
   }) : super(key: key);
 
   @override
@@ -103,6 +105,12 @@ class _CustomMapWidgetState extends State<CustomMapWidget> {
           options: MapOptions(
             initialCenter: _currentCenter!,
             initialZoom: widget.zoom,
+            onPositionChanged: (position, hasGesture) {
+              // Call the callback when map is moved or zoomed
+              if (hasGesture && widget.onMapMove != null) {
+                widget.onMapMove!();
+              }
+            },
           ),
           children: [
             TileLayer(

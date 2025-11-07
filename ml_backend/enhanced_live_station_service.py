@@ -823,35 +823,68 @@ class EnhancedLiveStationService:
         return station.get('station_id', station.get('id'))
     
     def _update_all_stations(self):
-        """Update readings for all stations"""
-        for station in self.stations:
-            reading = self._generate_realistic_reading(station)
-            station_id = self._get_station_id(station)
-            self.current_readings[station_id] = asdict(reading)
+        """Update readings for all stations (optimized batch processing)"""
+        total = len(self.stations)
+        batch_size = 500  # Process in batches for better performance
+        
+        print(f"🔄 Updating {total} stations in batches of {batch_size}...")
+        
+        for i in range(0, total, batch_size):
+            batch = self.stations[i:i + batch_size]
             
-            # Store historical data
-            if station_id not in self.historical_data:
-                self.historical_data[station_id] = []
+            for station in batch:
+                reading = self._generate_realistic_reading(station)
+                station_id = self._get_station_id(station)
+                self.current_readings[station_id] = asdict(reading)
+                
+                # Store historical data
+                if station_id not in self.historical_data:
+                    self.historical_data[station_id] = []
+                
+                self.historical_data[station_id].append(asdict(reading))
+                
+                # Keep last 100 readings
+                if len(self.historical_data[station_id]) > 100:
+                    self.historical_data[station_id] = self.historical_data[station_id][-100:]
             
-            self.historical_data[station_id].append(asdict(reading))
-            
-            # Keep last 100 readings
-            if len(self.historical_data[station_id]) > 100:
-                self.historical_data[station_id] = self.historical_data[station_id][-100:]
+            # Log progress for large batches
+            if total > 1000:
+                progress = min(i + batch_size, total)
+                print(f"   Progress: {progress}/{total} ({progress*100//total}%)")
         
         self.last_update = datetime.datetime.now().isoformat()
+        print(f"✅ Batch update complete at {self.last_update}")
     
     def _background_update_loop(self):
-        """Background thread for automatic updates"""
-        print(f"🔄 Starting automatic monitoring updates (interval: {self.update_interval}s)")
+        """Background thread for automatic updates with smart timing"""
+        print(f"🔄 Starting automatic monitoring updates")
+        print(f"   Update interval: {self.update_interval}s ({self.update_interval/60:.1f} minutes)")
+        print(f"   Total stations: {len(self.stations)}")
+        
+        update_count = 0
         
         while self.is_running:
             try:
+                update_count += 1
+                start_time = time.time()
+                
                 self._update_all_stations()
-                print(f"✅ Updated {len(self.stations)} stations at {self.last_update}")
+                
+                elapsed = time.time() - start_time
+                print(f"🎯 Update #{update_count} completed in {elapsed:.2f}s")
+                
+                # Only log full details every 10th update to reduce console spam
+                if update_count % 10 == 0:
+                    print(f"📊 Stats after {update_count} updates:")
+                    print(f"   Total readings: {len(self.current_readings)}")
+                    print(f"   Average update time: {elapsed:.2f}s")
+                
             except Exception as e:
                 print(f"❌ Error updating stations: {str(e)}")
+                import traceback
+                traceback.print_exc()
             
+            # Sleep until next update
             time.sleep(self.update_interval)
     
     def start_simulation(self, update_interval: int = 900):
