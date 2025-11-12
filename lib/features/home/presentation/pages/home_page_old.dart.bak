@@ -8,7 +8,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
-import 'package:pure_health/core/services/water_quality_api_service.dart';
+import 'package:pure_health/core/models/station_models.dart';
 
 // Pulsing location dot widget
 class PulsingLocationDot extends StatefulWidget {
@@ -112,9 +112,6 @@ class _HomePageState extends State<HomePage> {
   late final MapController _mapController;
   double _currentZoom = 7.0; // Lower zoom to show all of Maharashtra
   
-  // API Service
-  final WaterQualityApiService _apiService = WaterQualityApiService();
-  
   // Real-time data
   List<WaterQualityStation> _stations = [];
   Map<String, StationData> _stationData = {};
@@ -124,11 +121,9 @@ class _HomePageState extends State<HomePage> {
   int _safeCount = 0;
   int _warningCount = 0;
   int _criticalCount = 0;
-  DateTime _lastDataFetch = DateTime.now();
   String? _selectedStationId;
   LatLng? _userLocation; // User's current location
   bool _isLoading = true;
-  String? _errorMessage;
   
   // Smart loading state
   Set<String> _loadedStationIds = {}; // Track which stations are already loaded
@@ -296,14 +291,15 @@ class _HomePageState extends State<HomePage> {
     
     _safeSetState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
     try {
-      Map<String, dynamic> mapResponse;
+      // TODO: This file uses deprecated API service - needs to be updated or removed
+      // Commented out API calls since WaterQualityApiService no longer exists
+      // Map<String, dynamic> mapResponse;
       
       // Smart loading: Use nearby stations if user location available, otherwise load minimal set
-      if (_userLocation != null) {
+      // if (_userLocation != null) {
         print('📍 Loading nearby stations (30km radius)...');
         // Load only stations within 30km radius of user (optimized for performance)
         mapResponse = await _apiService.getNearbyStations(

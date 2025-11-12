@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pure_health/core/constants/color_constants.dart';
 import 'package:pure_health/core/theme/text_styles.dart';
 import 'package:pure_health/core/models/station_models.dart';
+import 'package:pure_health/features/ai_analysis/presentation/pages/station_ai_analysis_page_with_sidebar.dart';
 
 class StationDetailsPanel extends StatelessWidget {
   final String stationId;
@@ -30,13 +31,33 @@ class StationDetailsPanel extends StatelessWidget {
     }
   }
 
+  double? _getParameterValue(String parameter) {
+    final param = stationData.parameters[parameter];
+    if (param == null) return null;
+    
+    // Handle nested object structure: {'value': 7.0, 'unit': 'pH'}
+    if (param is Map<String, dynamic>) {
+      final value = param['value'];
+      if (value is num) {
+        return value.toDouble();
+      }
+    }
+    
+    // Handle direct double value
+    if (param is num) {
+      return param.toDouble();
+    }
+    
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = stationData.status;
-    final pH = stationData.parameters['pH'] as double?;
-    final turbidity = stationData.parameters['turbidity'] as double?;
-    final dissolvedOxygen = stationData.parameters['dissolvedOxygen'] as double?;
-    final temperature = stationData.parameters['temperature'] as double?;
+    final pH = _getParameterValue('pH');
+    final turbidity = _getParameterValue('turbidity');
+    final dissolvedOxygen = _getParameterValue('dissolvedOxygen');
+    final temperature = _getParameterValue('temperature');
     final timestamp = DateTime.parse(stationData.timestamp);
 
     return Column(
@@ -87,34 +108,73 @@ class StationDetailsPanel extends StatelessWidget {
         
         const SizedBox(height: 24),
         
-        // AI Predictions
-        _buildSectionHeader('AI Predictions', Icons.trending_up),
-        const SizedBox(height: 16),
-        _buildPredictionCard('Next 7 Days', 'Quality expected to remain ${status.toLowerCase()}', Icons.calendar_today),
+        // AI Analysis Actions
+        _buildSectionHeader('AI Analysis', Icons.psychology),
         const SizedBox(height: 12),
-        _buildPredictionCard('Risk Level', 'Low contamination risk', Icons.shield),
+        Text(
+          'Get detailed AI-powered analysis for this station',
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.mediumGray,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildAIAnalysisCard(
+          'Quality Prediction',
+          'Forecast water quality trends for the next 60 days',
+          Icons.trending_up,
+          AppColors.primaryBlue,
+          () => _navigateToAIAnalysis(context, 'prediction'),
+        ),
+        const SizedBox(height: 12),
+        _buildAIAnalysisCard(
+          'Risk Assessment',
+          'Identify contamination risks and safety factors',
+          Icons.warning_amber_rounded,
+          AppColors.warning,
+          () => _navigateToAIAnalysis(context, 'risk'),
+        ),
+        const SizedBox(height: 12),
+        _buildAIAnalysisCard(
+          'Trend Analysis',
+          'Analyze historical data patterns and changes',
+          Icons.show_chart,
+          AppColors.success,
+          () => _navigateToAIAnalysis(context, 'trends'),
+        ),
+        const SizedBox(height: 12),
+        _buildAIAnalysisCard(
+          'Recommendations',
+          'Get AI-powered treatment and monitoring advice',
+          Icons.lightbulb_outline,
+          AppColors.accentPink,
+          () => _navigateToAIAnalysis(context, 'recommendations'),
+        ),
         
         const SizedBox(height: 24),
         
-        // Quick Insights
-        _buildSectionHeader('Key Insights', Icons.lightbulb_outline),
+        // Quick Insights (Real-time from live data)
+        _buildSectionHeader('Live Insights', Icons.insights),
         const SizedBox(height: 16),
-        _buildInsightItem('✓ All parameters within safe limits', AppColors.success),
+        _buildInsightItem('✓ Real-time monitoring active', AppColors.success),
         const SizedBox(height: 8),
-        _buildInsightItem('↗ Slight pH increase trend observed', AppColors.warning),
+        _buildInsightItem('📊 Updated ${getTimeAgo(timestamp)}', AppColors.primaryBlue),
         const SizedBox(height: 8),
-        _buildInsightItem('→ Regular monitoring recommended', AppColors.primaryBlue),
+        _buildInsightItem(
+          status == 'Excellent' || status == 'Good' 
+            ? '✓ All parameters within safe limits' 
+            : '⚠ Some parameters need attention',
+          status == 'Excellent' || status == 'Good' ? AppColors.success : AppColors.warning,
+        ),
         
         const SizedBox(height: 24),
         
         // Actions
-        _buildSectionHeader('Available Actions', Icons.touch_app),
+        _buildSectionHeader('Quick Actions', Icons.touch_app),
         const SizedBox(height: 16),
-        _buildActionButton('View Full Report', Icons.description, () {}),
+        _buildActionButton('Download Station Data', Icons.download, () {}),
         const SizedBox(height: 10),
-        _buildActionButton('Export Data', Icons.download, () {}),
-        const SizedBox(height: 10),
-        _buildActionButton('Set Alert', Icons.notifications, () {}),
+        _buildActionButton('Set Custom Alert', Icons.notifications_active, () {}),
       ],
     );
   }
@@ -174,33 +234,6 @@ class StationDetailsPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildPredictionCard(String title, String description, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.success.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.success.withOpacity(0.2), width: 1),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.success, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppTextStyles.body.copyWith(color: AppColors.charcoal, fontWeight: FontWeight.w600, fontSize: 14)),
-                const SizedBox(height: 2),
-                Text(description, style: AppTextStyles.caption.copyWith(color: AppColors.mediumGray, fontSize: 12)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildInsightItem(String text, Color color) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,6 +270,81 @@ class StationDetailsPanel extends StatelessWidget {
             const SizedBox(width: 10),
             Text(label, style: AppTextStyles.body.copyWith(color: AppColors.primaryBlue, fontWeight: FontWeight.w600, fontSize: 14)),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAIAnalysisCard(
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.charcoal,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.mediumGray,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: color,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _navigateToAIAnalysis(BuildContext context, String analysisType) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StationAIAnalysisPageWithSidebar(
+          stationId: stationId,
+          station: station,
+          analysisType: analysisType,
         ),
       ),
     );

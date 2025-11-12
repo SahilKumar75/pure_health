@@ -8,12 +8,6 @@ class DashboardPanel extends StatelessWidget {
   final int safeCount;
   final int warningCount;
   final int criticalCount;
-  final String? selectedDistrict;
-  final String? selectedType;
-  final List<String> availableDistricts;
-  final Function(String?) onDistrictChanged;
-  final Function(String?) onTypeChanged;
-  final VoidCallback onClearFilters;
 
   const DashboardPanel({
     super.key,
@@ -22,12 +16,6 @@ class DashboardPanel extends StatelessWidget {
     required this.safeCount,
     required this.warningCount,
     required this.criticalCount,
-    required this.selectedDistrict,
-    required this.selectedType,
-    required this.availableDistricts,
-    required this.onDistrictChanged,
-    required this.onTypeChanged,
-    required this.onClearFilters,
   });
 
   @override
@@ -35,130 +23,6 @@ class DashboardPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Filters Section
-        _buildSectionHeader('Filters', Icons.filter_list),
-        const SizedBox(height: 16),
-        
-        // District filter - Fixed focus traversal issue
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.lightCream,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.darkCream.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: ExcludeFocus(
-              child: DropdownButton<String?>(
-                isExpanded: true,
-                value: selectedDistrict,
-                hint: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    'All Districts',
-                    style: AppTextStyles.body.copyWith(
-                      color: AppColors.mediumGray,
-                    ),
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                borderRadius: BorderRadius.circular(12),
-                items: [
-                  DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('All Districts', style: AppTextStyles.body),
-                  ),
-                  ...availableDistricts.map((district) => DropdownMenuItem<String?>(
-                    value: district,
-                    child: Text(district, style: AppTextStyles.body),
-                  )),
-                ],
-                onChanged: onDistrictChanged,
-              ),
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 12),
-        
-        // Type filter - Fixed focus traversal issue
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.lightCream,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.darkCream.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: ExcludeFocus(
-              child: DropdownButton<String?>(
-                isExpanded: true,
-                value: selectedType,
-                hint: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    'All Types',
-                    style: AppTextStyles.body.copyWith(
-                      color: AppColors.mediumGray,
-                    ),
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                borderRadius: BorderRadius.circular(12),
-                items: [
-                  DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('All Types', style: AppTextStyles.body),
-                  ),
-                  DropdownMenuItem<String?>(
-                    value: 'Surface Water',
-                    child: Text('Surface Water', style: AppTextStyles.body),
-                  ),
-                  DropdownMenuItem<String?>(
-                    value: 'Groundwater',
-                    child: Text('Groundwater', style: AppTextStyles.body),
-                  ),
-                ],
-                onChanged: onTypeChanged,
-              ),
-            ),
-          ),
-        ),
-        
-        // Clear filters button
-        if (selectedDistrict != null || selectedType != null) ...[
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: onClearFilters,
-              icon: const Icon(Icons.clear, size: 18),
-              label: const Text('Clear Filters'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.lightCream,
-                foregroundColor: AppColors.primaryBlue,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(
-                    color: AppColors.primaryBlue.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-        
-        const SizedBox(height: 20),
-        Divider(height: 1, color: AppColors.darkCream.withOpacity(0.4)),
-        const SizedBox(height: 20),
-        
         // System Status Section
         _buildSectionHeader('System Status', Icons.analytics_outlined),
         const SizedBox(height: 16),
