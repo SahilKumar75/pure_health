@@ -4,6 +4,7 @@ import 'package:pure_health/core/constants/color_constants.dart';
 import 'package:pure_health/core/theme/text_styles.dart';
 import 'package:pure_health/core/services/local_storage_service.dart';
 import 'package:pure_health/features/ml_analysis/data/services/historical_data_service.dart';
+import 'package:pure_health/ml/repositories/ml_repository.dart';
 import 'package:pure_health/features/ai_analysis/presentation/widgets/time_range_selector.dart';
 import 'package:pure_health/core/models/station_models.dart';
 
@@ -85,8 +86,8 @@ class _StationAIAnalysisPageState extends State<StationAIAnalysisPage> {
   }
 
   Future<void> _performAnalysis() async {
-    if (_historicalService == null || _filteredData == null || _filteredData!.isEmpty) {
-      _showError('No data available for the selected time range');
+    if (_historicalService == null) {
+      _showError('Service not initialized');
       return;
     }
 
@@ -98,6 +99,28 @@ class _StationAIAnalysisPageState extends State<StationAIAnalysisPage> {
       switch (widget.analysisType) {
         case 'prediction':
           result = await _historicalService!.getMLPredictionData(widget.stationId);
+          // If we don't have historical data locally, call ML repository fallback
+          if (result['hasData'] != true) {
+            final ml = MLRepository();
+            try {
+              final pred = await ml.getWaterQualityPrediction({'stationId': widget.stationId});
+              // Convert into shape the UI expects (minimal)
+              result = {
+                'hasData': true,
+                'dataPoints': 0,
+                'statistics': {
+                  'avgWqi': pred.predictedValue,
+                  'minWqi': pred.predictedValue,
+                  'maxWqi': pred.predictedValue,
+                },
+                'message': 'Prediction (fallback) available',
+                'prediction': pred.toJson(),
+              };
+            } catch (e) {
+              // keep original result (no data)
+              print('[STATION_AI_ANALYSIS] ML fallback failed: $e');
+            }
+          }
           break;
         case 'risk':
           result = await _historicalService!.getRiskAssessmentData(widget.stationId);
@@ -457,7 +480,13 @@ class _StationAIAnalysisPageState extends State<StationAIAnalysisPage> {
   }
 
   Widget _buildAnalysisButton() {
-    final isEnabled = _filteredData != null && _filteredData!.isNotEmpty && !_isAnalyzing;
+    // Allow forcing prediction even without filtered historical data by enabling
+    // the button when the analysis type is 'prediction'. For other types
+    // require filtered data.
+    final isEnabled = !_isAnalyzing && (
+      widget.analysisType == 'prediction' ||
+      (_filteredData != null && _filteredData!.isNotEmpty)
+    );
 
     return CupertinoButton(
       padding: EdgeInsets.zero,

@@ -8,6 +8,8 @@ import 'package:pure_health/features/settings/presentation/pages/settings_page.d
 import 'package:pure_health/features/ai_analysis/presentation/pages/ai_analysis_page.dart';
 import 'package:pure_health/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:pure_health/features/live_monitoring/presentation/pages/live_monitoring_page.dart';
+import 'package:pure_health/features/phase6_demo/presentation/pages/phase6_demo_page.dart';
+import 'package:pure_health/features/ml_verification/presentation/pages/ml_verification_page.dart';
 
 /// Custom smooth page transition with fade + slide effect
 CustomTransitionPage<T> smoothPage<T>({required Widget child}) =>
@@ -56,28 +58,40 @@ class AppRouter {
       'route': '/live-monitoring',
     },
     {
+      'icon': 'stream',
+      'label': 'Phase 6 Demo',
+      'index': 3,
+      'route': '/phase6-demo',
+    },
+    {
       'icon': 'ai',
       'label': 'AI Analysis',
-      'index': 3,
+      'index': 4,
       'route': '/ai-analysis',
+    },
+    {
+      'icon': 'verified',
+      'label': 'ML Verification',
+      'index': 5,
+      'route': '/ml-verification',
     },
     {
       'icon': 'history',
       'label': 'History',
-      'index': 4,
+      'index': 6,
       'route': '/history',
     },
     // Bottom Section - User Settings
     {
       'icon': 'profile',
       'label': 'Profile',
-      'index': 5,
+      'index': 7,
       'route': '/profile',
     },
     {
       'icon': 'settings',
       'label': 'Settings',
-      'index': 6,
+      'index': 8,
       'route': '/settings',
     },
   ];
@@ -168,12 +182,28 @@ class AppRouter {
                 smoothPage(child: const LiveMonitoringPage()),
           ),
 
+          // Phase 6 Demo
+          GoRoute(
+            path: '/phase6-demo',
+            name: 'phase6-demo',
+            pageBuilder: (context, state) =>
+                smoothPage(child: const Phase6DemoPage()),
+          ),
+
           // AI Analysis
           GoRoute(
             path: '/ai-analysis',
             name: 'ai-analysis',
             pageBuilder: (context, state) =>
                 smoothPage(child: const AIAnalysisPage()),
+          ),
+
+          // ML Verification
+          GoRoute(
+            path: '/ml-verification',
+            name: 'ml-verification',
+            pageBuilder: (context, state) =>
+                smoothPage(child: const MLVerificationPage()),
           ),
 
           // History

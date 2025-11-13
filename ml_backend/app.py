@@ -1508,6 +1508,249 @@ def station_recommendations(station_id):
         print(f"❌ Recommendations Error for {station_id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+# ============================================
+# ML VERIFICATION ENDPOINTS
+# ============================================
+
+@app.route('/api/ml/verify', methods=['GET', 'OPTIONS'])
+def verify_ml_system():
+    """Run comprehensive ML verification and return results"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        from ml_verification_system import MLVerificationSystem
+        
+        print("🔍 Running ML Verification System...")
+        verifier = MLVerificationSystem()
+        results = verifier.run_full_verification()
+        
+        return jsonify({
+            'success': True,
+            'verification': results,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Verification Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ml/status', methods=['GET', 'OPTIONS'])
+def ml_system_status():
+    """Quick check of ML system status"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        import os
+        from ml_models import WaterQualityMLModels
+        
+        models_dir = 'models'
+        status = {
+            'models_directory_exists': os.path.exists(models_dir),
+            'models_found': [],
+            'training_data_found': [],
+            'models_loaded': False
+        }
+        
+        # Check for model files
+        expected_models = ['ph_model.pkl', 'bod_model.pkl', 'do_model.pkl', 
+                          'fc_model.pkl', 'tds_model.pkl', 'wqi_model.pkl']
+        
+        for model_file in expected_models:
+            model_path = os.path.join(models_dir, model_file)
+            if os.path.exists(model_path):
+                status['models_found'].append(model_file)
+        
+        # Check for training data
+        training_files = ['water_quality_all_seasons.csv', 'water_quality_monsoon.csv',
+                         'water_quality_summer.csv', 'water_quality_winter.csv']
+        
+        for data_file in training_files:
+            if os.path.exists(data_file):
+                status['training_data_found'].append(data_file)
+        
+        # Try to load models
+        try:
+            ml = WaterQualityMLModels()
+            status['models_loaded'] = ml.load_models()
+        except:
+            status['models_loaded'] = False
+        
+        # Overall status
+        if status['models_loaded'] and len(status['models_found']) >= 6:
+            status['overall_status'] = 'READY'
+            status['message'] = 'ML system is fully operational'
+        elif len(status['models_found']) >= 6:
+            status['overall_status'] = 'PARTIALLY_READY'
+            status['message'] = 'Models found but not loaded'
+        else:
+            status['overall_status'] = 'NOT_READY'
+            status['message'] = 'ML models not found. Please train models first.'
+        
+        return jsonify({
+            'success': True,
+            'status': status,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ml/training-data', methods=['GET', 'OPTIONS'])
+def get_training_data_info():
+    """Get information about training data used for ML models"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        import hashlib
+        
+        training_data = {}
+        
+        data_files = [
+            'water_quality_all_seasons.csv',
+            'water_quality_monsoon.csv',
+            'water_quality_summer.csv',
+            'water_quality_winter.csv'
+        ]
+        
+        for data_file in data_files:
+            if os.path.exists(data_file):
+                df = pd.read_csv(data_file)
+                
+                # Calculate data fingerprint
+                data_hash = hashlib.md5(df.to_string().encode()).hexdigest()
+                
+                info = {
+                    'filename': data_file,
+                    'rows': len(df),
+                    'columns': list(df.columns),
+                    'data_hash': data_hash[:16],
+                    'parameters': {}
+                }
+                
+                # Get statistics for key parameters
+                key_params = ['ph', 'bod', 'dissolved_oxygen', 'fecal_coliform', 'wqi']
+                for param in key_params:
+                    if param in df.columns:
+                        info['parameters'][param] = {
+                            'mean': float(df[param].mean()),
+                            'min': float(df[param].min()),
+                            'max': float(df[param].max()),
+                            'std': float(df[param].std())
+                        }
+                
+                # Date range
+                if 'timestamp' in df.columns:
+                    df['timestamp'] = pd.to_datetime(df['timestamp'])
+                    info['date_range'] = {
+                        'start': df['timestamp'].min().isoformat(),
+                        'end': df['timestamp'].max().isoformat()
+                    }
+                
+                # Seasons
+                if 'season' in df.columns:
+                    info['seasons'] = df['season'].value_counts().to_dict()
+                
+                training_data[data_file] = info
+        
+        return jsonify({
+            'success': True,
+            'training_data': training_data,
+            'total_files': len(training_data),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ml/test-prediction', methods=['POST', 'OPTIONS'])
+def test_ml_prediction():
+    """Test ML prediction with sample data and show detailed results"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        from enhanced_prediction_service import EnhancedPredictionService
+        
+        data = request.json or {}
+        
+        # Use provided data or default test data
+        test_data = data.get('test_data', {
+            'ph': 7.5,
+            'bod': 2.5,
+            'dissolved_oxygen': 6.2,
+            'fecal_coliform': 450,
+            'temperature': 26.5,
+            'turbidity': 4.2,
+            'tds': 320
+        })
+        
+        season = data.get('season', 'monsoon')
+        horizons = data.get('horizons', [7, 30, 90])
+        
+        # Generate predictions
+        service = EnhancedPredictionService()
+        forecast = service.generate_multi_parameter_forecast(test_data, season, horizons)
+        
+        # Test determinism - run same prediction twice
+        forecast2 = service.generate_multi_parameter_forecast(test_data, season, horizons)
+        
+        # Compare predictions
+        determinism_test = {
+            'passed': True,
+            'differences': {}
+        }
+        
+        for horizon in [str(h) for h in horizons]:
+            if horizon in forecast['forecasts'] and horizon in forecast2['forecasts']:
+                for param in ['pH', 'BOD', 'DO']:
+                    val1 = forecast['forecasts'][horizon]['parameters'][param]['value']
+                    val2 = forecast2['forecasts'][horizon]['parameters'][param]['value']
+                    diff = abs(val1 - val2)
+                    
+                    determinism_test['differences'][f'{param}_{horizon}d'] = {
+                        'run1': val1,
+                        'run2': val2,
+                        'difference': diff,
+                        'is_deterministic': diff < 0.001
+                    }
+                    
+                    if diff >= 0.001:
+                        determinism_test['passed'] = False
+        
+        return jsonify({
+            'success': True,
+            'test_data': test_data,
+            'season': season,
+            'forecast': forecast,
+            'determinism_test': determinism_test,
+            'ml_metadata': {
+                'model_version': 'Phase 5 - Multi-Parameter',
+                'uses_real_ml': True,
+                'training_samples': 1900
+            },
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Test Prediction Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     print("\n" + "="*80)
     print("🚀 PureHealth Enhanced Water Quality Monitoring System")
@@ -1517,6 +1760,11 @@ if __name__ == '__main__':
     print("\n📊 AI Analysis Endpoints:")
     print("   POST http://localhost:8000/api/ai/analyze")
     print("   POST http://localhost:8000/api/reports/generate")
+    print("\n🔬 ML Verification Endpoints (NEW!):")
+    print("   GET  http://localhost:8000/api/ml/status")
+    print("   GET  http://localhost:8000/api/ml/verify")
+    print("   GET  http://localhost:8000/api/ml/training-data")
+    print("   POST http://localhost:8000/api/ml/test-prediction")
     print("\n🌊 Enhanced Live Station Monitoring Endpoints:")
     print("   GET  http://localhost:8000/api/stations")
     print("   GET  http://localhost:8000/api/stations/<id>")

@@ -43,3 +43,22 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Python related
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+ml_backend/server.log
+ml_backend/reports/
+ml_backend/uploads/
+ml_backend/saved_reports/
+ml_backend/satellite_cache/
+ml_backend/historical_data/
+ml_backend/*.log
+ml_backend/models/*.pkl
+ml_backend/*.csv

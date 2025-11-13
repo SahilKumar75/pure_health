@@ -52,6 +52,7 @@ dependencies:
   dio: ^5.9.0
   path_provider: ^2.1.5
   shared_preferences: ^2.3.3
+  web_socket_channel: ^3.0.1
 
 dev_dependencies:
   flutter_test:
