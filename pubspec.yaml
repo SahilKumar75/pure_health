@@ -109,3 +109,4 @@ flutter:
   assets:
     - assets/Group 1000001052.png
     - assets/all_stations_data.json
+    - assets/historical_data/

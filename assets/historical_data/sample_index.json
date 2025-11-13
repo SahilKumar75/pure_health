@@ -1,0 +1,327 @@
+{
+  "generated_at": "2025-11-12T14:30:02.820106",
+  "total_stations": 50,
+  "days_per_station": 90,
+  "total_readings": 4500,
+  "date_range": {
+    "start": "2025-08-14T14:30:02.820119",
+    "end": "2025-11-12T14:30:02.820125"
+  },
+  "disease_categories": {
+    "waterborne": [
+      "cholera",
+      "typhoid",
+      "dysentery",
+      "hepatitis_a"
+    ],
+    "vector_borne": [
+      "malaria",
+      "dengue"
+    ],
+    "water_washed": [
+      "skin_infections"
+    ]
+  },
+  "stations": [
+    {
+      "id": "MH-PUN-SW-001",
+      "name": "Mula - Pune",
+      "district": "Pune",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-PUN-SW-002",
+      "name": "Mutha - Pune",
+      "district": "Pune",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-PUN-SW-003",
+      "name": "Bhima - Pune",
+      "district": "Pune",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-PUN-SW-004",
+      "name": "Khadakwasla Dam - Pune",
+      "district": "Pune",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-PUN-SW-005",
+      "name": "Pavana Dam - Pune",
+      "district": "Pune",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-PUN-SW-006",
+      "name": "Temghar Dam - Pune",
+      "district": "Pune",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-PUN-SW-007",
+      "name": "Mula - Pune",
+      "district": "Pune",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SAT-SW-001",
+      "name": "Krishna - Satara",
+      "district": "Satara",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SAT-SW-002",
+      "name": "Koyna - Satara",
+      "district": "Satara",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SAT-SW-003",
+      "name": "Venna - Satara",
+      "district": "Satara",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SAT-SW-004",
+      "name": "Koyna Dam - Satara",
+      "district": "Satara",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SAT-SW-005",
+      "name": "Dhom Dam - Satara",
+      "district": "Satara",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SAN-SW-001",
+      "name": "Krishna - Sangli",
+      "district": "Sangli",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SAN-SW-002",
+      "name": "Warna - Sangli",
+      "district": "Sangli",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SAN-SW-003",
+      "name": "Krishna River - Sangli",
+      "district": "Sangli",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SAN-SW-004",
+      "name": "Warna River - Sangli",
+      "district": "Sangli",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SAN-SW-005",
+      "name": "Krishna - Sangli",
+      "district": "Sangli",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SOL-SW-001",
+      "name": "Bhima - Solapur",
+      "district": "Solapur",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SOL-SW-002",
+      "name": "Sina - Solapur",
+      "district": "Solapur",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SOL-SW-003",
+      "name": "Ujjani Dam - Solapur",
+      "district": "Solapur",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SOL-SW-004",
+      "name": "Bhima River - Solapur",
+      "district": "Solapur",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SOL-SW-005",
+      "name": "Bhima - Solapur",
+      "district": "Solapur",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SOL-SW-006",
+      "name": "Sina - Solapur",
+      "district": "Solapur",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SOL-SW-007",
+      "name": "Ujjani Dam - Solapur",
+      "district": "Solapur",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-KOL-SW-001",
+      "name": "Panchganga - Kolhapur",
+      "district": "Kolhapur",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-KOL-SW-002",
+      "name": "Krishna - Kolhapur",
+      "district": "Kolhapur",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-KOL-SW-003",
+      "name": "Panchganga River - Kolhapur",
+      "district": "Kolhapur",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-KOL-SW-004",
+      "name": "Radhanagari Dam - Kolhapur",
+      "district": "Kolhapur",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-KOL-SW-005",
+      "name": "Panchganga - Kolhapur",
+      "district": "Kolhapur",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-MUM-SW-001",
+      "name": "Mithi - Mumbai",
+      "district": "Mumbai",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-MSUB-SW-001",
+      "name": "Mithi - Mumbai Suburban",
+      "district": "Mumbai Suburban",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-THA-SW-001",
+      "name": "Ulhas - Thane",
+      "district": "Thane",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-THA-SW-002",
+      "name": "Vaitarna - Thane",
+      "district": "Thane",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-PAL-SW-001",
+      "name": "Vaitarna - Palghar",
+      "district": "Palghar",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-PAL-SW-002",
+      "name": "Surya - Palghar",
+      "district": "Palghar",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-PAL-SW-003",
+      "name": "Vaitarna Dam - Palghar",
+      "district": "Palghar",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-PAL-SW-004",
+      "name": "Surya River - Palghar",
+      "district": "Palghar",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-RAI-SW-001",
+      "name": "Patalganga - Raigad",
+      "district": "Raigad",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-RAI-SW-002",
+      "name": "Amba - Raigad",
+      "district": "Raigad",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-RAI-SW-003",
+      "name": "Savitri - Raigad",
+      "district": "Raigad",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-RAI-SW-004",
+      "name": "Patalganga River - Raigad",
+      "district": "Raigad",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-RAI-SW-005",
+      "name": "Arabian Sea Coastal - Raigad",
+      "district": "Raigad",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-RTN-SW-001",
+      "name": "Kajali - Ratnagiri",
+      "district": "Ratnagiri",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-RTN-SW-002",
+      "name": "Shastri - Ratnagiri",
+      "district": "Ratnagiri",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-RTN-SW-003",
+      "name": "Arabian Sea Coastal - Ratnagiri",
+      "district": "Ratnagiri",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-RTN-SW-004",
+      "name": "Kajali River - Ratnagiri",
+      "district": "Ratnagiri",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SIN-SW-001",
+      "name": "Terekhol - Sindhudurg",
+      "district": "Sindhudurg",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SIN-SW-002",
+      "name": "Arabian Sea Coastal - Sindhudurg",
+      "district": "Sindhudurg",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-SIN-SW-003",
+      "name": "Terekhol - Sindhudurg",
+      "district": "Sindhudurg",
+      "type": "surface_water"
+    },
+    {
+      "id": "MH-NAS-SW-001",
+      "name": "Godavari - Nashik",
+      "district": "Nashik",
+      "type": "surface_water"
+    }
+  ]
+}

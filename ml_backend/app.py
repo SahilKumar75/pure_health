@@ -9,6 +9,8 @@ import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
 import hashlib
+import pandas as pd
+import numpy as np
 
 app = Flask(__name__)
 
@@ -1363,6 +1365,147 @@ def get_viewport_stations():
         })
     except Exception as e:
         print(f"❌ Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# STATION-SPECIFIC AI ANALYSIS ENDPOINTS
+# ============================================
+
+@app.route('/api/stations/<station_id>/ai/prediction', methods=['POST', 'OPTIONS'])
+def station_prediction(station_id):
+    """Get AI predictions for a specific station"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        data = request.json
+        historical_data = data.get('historical_data', [])
+        prediction_days = data.get('prediction_days', 30)
+        
+        if not historical_data:
+            return jsonify({'error': 'No historical data provided'}), 400
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(historical_data)
+        
+        # Generate predictions using prediction service
+        from prediction_service import PredictionService
+        prediction_service = PredictionService()
+        prediction_service.prediction_days = min(prediction_days, 60)
+        
+        predictions = prediction_service.generate_predictions(df)
+        
+        return jsonify({
+            'success': True,
+            'station_id': station_id,
+            'prediction_horizon': prediction_days,
+            'predictions': predictions,
+            'analysis_date': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Prediction Error for {station_id}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/stations/<station_id>/ai/risk', methods=['POST', 'OPTIONS'])
+def station_risk(station_id):
+    """Get risk assessment for a specific station"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        data = request.json
+        historical_data = data.get('historical_data', [])
+        
+        if not historical_data:
+            return jsonify({'error': 'No historical data provided'}), 400
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(historical_data)
+        
+        # Generate risk assessment using risk service
+        from risk_assessment_service import RiskAssessmentService
+        risk_service = RiskAssessmentService()
+        
+        risk_assessment = risk_service.assess_risks(df)
+        
+        return jsonify({
+            'success': True,
+            'station_id': station_id,
+            'risk_assessment': risk_assessment,
+            'analysis_date': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Risk Assessment Error for {station_id}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/stations/<station_id>/ai/trends', methods=['POST', 'OPTIONS'])
+def station_trends(station_id):
+    """Get trend analysis for a specific station"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        data = request.json
+        historical_data = data.get('historical_data', [])
+        
+        if not historical_data:
+            return jsonify({'error': 'No historical data provided'}), 400
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(historical_data)
+        
+        # Generate trend analysis using trend service
+        from trend_analysis_service import TrendAnalysisService
+        trend_service = TrendAnalysisService()
+        
+        trends = trend_service.analyze_trends(df)
+        
+        return jsonify({
+            'success': True,
+            'station_id': station_id,
+            'trends': trends,
+            'analysis_date': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Trend Analysis Error for {station_id}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/stations/<station_id>/ai/recommendations', methods=['POST', 'OPTIONS'])
+def station_recommendations(station_id):
+    """Get AI recommendations for a specific station"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        data = request.json
+        historical_data = data.get('historical_data', [])
+        
+        if not historical_data:
+            return jsonify({'error': 'No historical data provided'}), 400
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(historical_data)
+        
+        # Generate risk assessment first
+        from risk_assessment_service import RiskAssessmentService
+        risk_service = RiskAssessmentService()
+        risk_assessment = risk_service.assess_risks(df)
+        
+        # Generate recommendations based on risk assessment
+        recommendations = ai_analysis._generate_recommendations(df, risk_assessment)
+        
+        return jsonify({
+            'success': True,
+            'station_id': station_id,
+            'recommendations': recommendations,
+            'analysis_date': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Recommendations Error for {station_id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
